@@ -508,6 +508,11 @@ class _PlayScreenState
 
   int generation = 0;
 
+  String? gameEndTitle;
+  String? gameEndMessage;
+  bool isWin = false;
+  List<String> history = [];
+
   @override
   void initState() {
 
@@ -523,6 +528,12 @@ class _PlayScreenState
 
     timer?.cancel();
 
+    setState(() {
+      gameEndTitle = null;
+      gameEndMessage = null;
+      isWin = false;
+    });
+
     int aliveInit = 0;
     for (int x = 0; x < size; x++) {
       for (int y = 0; y < size; y++) {
@@ -530,9 +541,16 @@ class _PlayScreenState
       }
     }
     if (aliveInit == 0) {
-      _showGameOverDialog("EMPTY GRID", "Draw some living cells before starting the simulation!");
+      setState(() {
+        gameEndTitle = "EMPTY GRID";
+        gameEndMessage = "Draw some living cells before starting!";
+        isWin = false;
+      });
       return;
     }
+
+    history.clear();
+    history.add(_gridToString(grid));
 
     timer = Timer.periodic(
       const Duration(
@@ -554,59 +572,36 @@ class _PlayScreenState
           grid = nextGrid;
         });
         
+        String nextStr = _gridToString(nextGrid);
+        bool isOscillating = !isSame && history.contains(nextStr);
+
         if (aliveCount == 0) {
           pause();
-          _showGameOverDialog("THE END", "All cells have died. Life faded away...\n\nYou Lose!");
+          setState(() {
+            gameEndTitle = "THE END";
+            gameEndMessage = "All cells have died. Life faded away... You Lose!";
+            isWin = false;
+          });
         } else if (isSame) {
           pause();
-          _showGameOverDialog("STABILIZED!", "Life has found a stable balance.\n\nYou Win!");
+          setState(() {
+            gameEndTitle = "STABILIZED!";
+            gameEndMessage = "Life has found a stable balance. You Win!";
+            isWin = true;
+          });
+        } else {
+          if (isOscillating) {
+            setState(() {
+              gameEndTitle = "ENDLESS LOOP!";
+              gameEndMessage = "The cells are trapped in a repeating pattern!";
+              isWin = true;
+            });
+          }
+          history.add(nextStr);
+          if (history.length > 25) {
+            history.removeAt(0);
+          }
         }
-      },
-    );
-  }
-
-  void _showGameOverDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: card,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: Colors.white.withOpacity(0.05)),
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(
-              color: green,
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
-              letterSpacing: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Text(
-            message,
-            style: const TextStyle(color: Colors.grey, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: green,
-                foregroundColor: bg,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
       },
     );
   }
@@ -622,6 +617,10 @@ class _PlayScreenState
     setState(() {
 
       generation = 0;
+      gameEndTitle = null;
+      gameEndMessage = null;
+      isWin = false;
+      history.clear();
 
       grid = List.generate(
         size,
@@ -629,6 +628,10 @@ class _PlayScreenState
             List.filled(size, 0),
       );
     });
+  }
+
+  String _gridToString(List<List<int>> g) {
+    return g.expand((row) => row).join('');
   }
 
   List<List<int>>
@@ -717,199 +720,145 @@ class _PlayScreenState
     String status = aliveCount == 0 ? "All cells dead" : "Active";
 
     return SafeArea(
-
       child: Padding(
-
-        padding:
-        const EdgeInsets.all(16),
-
+        padding: const EdgeInsets.all(16),
         child: Column(
-
           children: [
-
-            Row(
-
-              mainAxisAlignment:
-              MainAxisAlignment.spaceBetween,
-
-              children: [
-
-                const Text(
-
-                  "LIFE LAB",
-
-                  style: TextStyle(
-
-                    color: green,
-
-                    fontSize: 24,
-
-                    fontWeight:
-                    FontWeight.bold,
-                  ),
-                ),
-
-                Text(
-
-                  "GEN $generation",
-
-                  style:
-                  const TextStyle(
-                    color:
-                    Colors.grey,
-                  ),
-                )
-              ],
-            ),
-
-            const SizedBox(
-                height: 20),
-
             Expanded(
-
-              child:
-              GridView.builder(
-
-                physics:
-                const NeverScrollableScrollPhysics(),
-
-                itemCount:
-                size * size,
-
-                gridDelegate:
-                SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount:
-                  size,
-                ),
-
-                itemBuilder:
-                    (
-                    context,
-                    index) {
-
-                  int row =
-                      index ~/ size;
-
-                  int col =
-                      index % size;
-
-                  bool alive =
-                      grid[row][col] ==
-                          1;
-
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-
-                    onTap: () {
-
-                      setState(() {
-
-                        grid[row][col] =
-                        1 -
-                            grid[row]
-                            [col];
-                      });
-                    },
-
-                    child:
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-
-                      margin:
-                      const EdgeInsets
-                          .all(1.5),
-
-                      decoration:
-                      BoxDecoration(
-
-                        color:
-
-                        alive
-
-                            ? green
-
-                            : card,
-
-                        borderRadius:
-                        BorderRadius
-                            .circular(
-                            4),
-
-                        boxShadow:
-
-                        alive
-
-                            ? [
-
-                          BoxShadow(
-
-                            color: green
-                                .withOpacity(
-                                .5),
-
-                            blurRadius:
-                            8,
-                          )
-                        ]
-
-                            : [],
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "LIFE LAB",
+                        style: TextStyle(
+                          color: green,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "GEN $generation",
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: size * size,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: size,
+                      ),
+                      itemBuilder: (context, index) {
+                        int row = index ~/ size;
+                        int col = index % size;
+                        bool alive = grid[row][col] == 1;
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            setState(() {
+                              grid[row][col] = 1 - grid[row][col];
+                              gameEndTitle = null;
+                              gameEndMessage = null;
+                              isWin = false;
+                              history.clear();
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            margin: const EdgeInsets.all(1.5),
+                            decoration: BoxDecoration(
+                              color: alive ? green : card,
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: alive
+                                  ? [
+                                      BoxShadow(
+                                        color: green.withOpacity(.5),
+                                        blurRadius: 8,
+                                      )
+                                    ]
+                                  : [],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (gameEndTitle != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: isWin ? green.withOpacity(0.1) : Colors.redAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isWin ? green.withOpacity(0.3) : Colors.redAccent.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            gameEndTitle!,
+                            style: TextStyle(
+                              color: isWin ? green : Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            gameEndMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        "Press grid and click Let's Go to run simulation",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
                       ),
                     ),
-                  );
-                },
+                  Text(
+                    "Status: $status   •   Alive: $aliveCount",
+                    style: const TextStyle(color: green, fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ],
               ),
             ),
-
             const SizedBox(height: 16),
-            
-            const Text(
-              "Press grid and click Let's Go to run simulation",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 13),
-            ),
-            
-            const SizedBox(height: 6),
-            
-            Text(
-              "Status: $status   •   Alive: $aliveCount",
-              style: const TextStyle(color: green, fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-
-            const SizedBox(height: 16),
-
             Row(
-
               children: [
-
                 Expanded(
-                  child:
-                  actionButton(
+                  child: actionButton(
                     "Let's Go!",
                     Icons.play_arrow,
                     start,
                     isPrimary: true,
                   ),
                 ),
-
-                const SizedBox(
-                    width: 12),
-
+                const SizedBox(width: 12),
                 Expanded(
-                  child:
-                  actionButton(
+                  child: actionButton(
                     "Pause",
                     Icons.pause,
                     pause,
                     isPrimary: false,
                   ),
                 ),
-
-                const SizedBox(
-                    width: 12),
-
+                const SizedBox(width: 12),
                 Expanded(
-                  child:
-                  actionButton(
+                  child: actionButton(
                     "Clear",
                     Icons.refresh,
                     clear,
@@ -1258,6 +1207,21 @@ class LearnScreen extends StatelessWidget {
             "4. Reproduction",
             "If a dead (empty) cell has exactly 3 living neighbors, a brand new cell is born in that space! Life finds a way.",
             Icons.child_care,
+          ),
+          learnSection(
+            "The End (You Lose)",
+            "If every single cell dies and the grid becomes completely empty, life has faded away and you lose. Try drawing a larger or closer community of cells to start!",
+            Icons.close_rounded,
+          ),
+          learnSection(
+            "Stabilized (You Win!)",
+            "If your cells reach a perfect, unchanging balance where they survive endlessly without anyone dying or being born, you win the game!",
+            Icons.emoji_events,
+          ),
+          learnSection(
+            "Endless Loops",
+            "Sometimes the cells get trapped in a repeating pattern, oscillating back and forth forever (like a blinker). If you find one, sit back and enjoy the endless dance!",
+            Icons.loop,
           ),
           learnSection(
             "Emergent Beauty",
