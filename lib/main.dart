@@ -1157,61 +1157,61 @@ class LearnScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            "A quick guide for kids (and adults too!)",
+            "The fascinating rules of Conway's Game of Life.",
             style: TextStyle(
               color: Colors.grey,
               fontSize: 16,
             ),
           ),
           const SizedBox(height: 30),
-          learnCard(
-            "1. Living Squares",
-            "Every green square on the grid is 'alive'. The dark squares are empty space.",
-            Icons.check_box,
+          learnSection(
+            "The Grid & Cells",
+            "The game takes place on a grid of squares called 'cells'. A cell can be either 'alive' (green) or 'dead' (dark empty space). Every cell has 8 neighbors surrounding it: up, down, left, right, and diagonals.",
+            Icons.grid_on,
           ),
-          learnCard(
-            "2. Making Friends",
-            "Just like us, these squares need neighbors! If a square has 2 or 3 friends touching it, it stays alive.",
-            Icons.people,
+          learnSection(
+            "1. Underpopulation",
+            "If a living cell has fewer than 2 living neighbors, it dies of loneliness. It needs a community to survive!",
+            Icons.person_off,
           ),
-          learnCard(
-            "3. Too Crowded or Lonely",
-            "If a square has less than 2 friends, it gets too lonely and disappears. If it has more than 3, it gets too crowded and disappears too!",
-            Icons.warning_rounded,
+          learnSection(
+            "2. Survival",
+            "If a living cell has exactly 2 or 3 living neighbors, it is happy and survives into the next generation. The balance is just right.",
+            Icons.favorite,
           ),
-          learnCard(
-            "4. A New Baby Square!",
-            "If an empty space has exactly 3 living friends next to it, a brand new baby square is born right there!",
+          learnSection(
+            "3. Overpopulation",
+            "If a living cell has more than 3 living neighbors, it dies because it's too crowded and there aren't enough resources.",
+            Icons.groups,
+          ),
+          learnSection(
+            "4. Reproduction",
+            "If a dead (empty) cell has exactly 3 living neighbors, a brand new cell is born in that space! Life finds a way.",
             Icons.child_care,
           ),
-          learnCard(
-            "5. You Are In Control",
-            "Go to the 'Play' tab, tap the grid to draw some living squares, and press 'Let's Go!' to watch them move and grow.",
-            Icons.videogame_asset,
+          learnSection(
+            "Emergent Beauty",
+            "From these 4 simple rules, incredible and complex patterns emerge. Go to the 'Play' tab, draw a shape, and see what happens when you press 'Let's Go!'",
+            Icons.auto_awesome,
           ),
         ],
       ),
     );
   }
 
-  Widget learnCard(String title, String body, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.08), width: 2),
-      ),
-      child: Column(
+  Widget learnSection(String title, String body, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 32),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: green, size: 32),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
+          Icon(icon, color: green, size: 32),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   title,
                   style: const TextStyle(
                     color: green,
@@ -1219,16 +1219,16 @@ class LearnScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            body,
-            style: const TextStyle(
-              color: Colors.white70,
-              height: 1.6,
-              fontSize: 16,
+                const SizedBox(height: 8),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    height: 1.6,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
