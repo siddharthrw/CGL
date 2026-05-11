@@ -1239,6 +1239,19 @@ class LearnScreen extends StatelessWidget {
           faqItem("Why is it called the 'Game of Life'?", "Created by mathematician John Conway in 1970, it perfectly simulates the life, death, and reproduction of biological cells using simple math."),
           faqItem("What are Gliders?", "Gliders are special patterns of cells that move across the grid infinitely. They 'fly' diagonally across the board. Try drawing a small asymmetrical shape and see if it moves!"),
           faqItem("Can I change the rules?", "Absolutely! Go to the 'Rules' tab to experiment. Changing the required neighbors for birth or survival creates entirely new and bizarre universes."),
+          const SizedBox(height: 40),
+          const Center(
+            child: Text(
+              "Built by Randomwalk.ai",
+              style: TextStyle(
+                color: Colors.white30,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
