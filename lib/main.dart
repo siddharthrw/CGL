@@ -976,30 +976,25 @@ class RulesScreen extends StatelessWidget {
           const SizedBox(
               height: 30),
 
-          infoCard(
-            "🧬 STANDARD LIFE",
-            "Birth with 3 neighbors.\nSurvive with 2 or 3.",
-          ),
-
-          const SizedBox(
-              height: 20),
-
           sliderCard(
             "👶 Birth Rule",
             birthRule,
             onBirthChanged,
+            "Standard: 3\nA dead cell needs exactly this many neighbors to come to life.",
           ),
 
           sliderCard(
             "🌱 Survive Min",
             surviveMin,
             onSurviveMinChanged,
+            "Standard: 2\nA living cell needs at least this many neighbors to survive.",
           ),
 
           sliderCard(
             "🌳 Survive Max",
             surviveMax,
             onSurviveMaxChanged,
+            "Standard: 3\nA living cell needs no more than this many neighbors to survive.",
           ),
 
           infoCard(
@@ -1019,25 +1014,6 @@ class RulesScreen extends StatelessWidget {
 
       padding:
       const EdgeInsets.all(18),
-
-      decoration:
-      BoxDecoration(
-
-        color: card,
-
-        borderRadius:
-        BorderRadius.circular(
-            20),
-
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
 
       child: Column(
 
@@ -1075,7 +1051,8 @@ class RulesScreen extends StatelessWidget {
   Widget sliderCard(
       String title,
       int value,
-      Function(int) onChanged) {
+      Function(int) onChanged,
+      String tooltipText) {
 
     return Container(
 
@@ -1115,7 +1092,26 @@ class RulesScreen extends StatelessWidget {
 
             children: [
 
-              Text(title),
+              Row(
+                children: [
+                  Text(title),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: tooltipText,
+                    triggerMode: TooltipTriggerMode.tap,
+                    showDuration: const Duration(seconds: 4),
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: bg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: green.withOpacity(0.3)),
+                    ),
+                    textStyle: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+                    child: const Icon(Icons.info_outline, color: Colors.grey, size: 18),
+                  ),
+                ],
+              ),
 
               Text(
                 "$value",
