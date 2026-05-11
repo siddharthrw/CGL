@@ -389,7 +389,6 @@ class _HomeScreenState
         currentTab == index;
 
     return GestureDetector(
-
       onTap: () {
 
         setState(() {
@@ -738,10 +737,10 @@ class _PlayScreenState
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        "GEN $generation",
-                        style: const TextStyle(color: Colors.grey),
-                      ),
+                          Text(
+                            "GEN $generation",
+                            style: const TextStyle(color: Colors.grey),
+                          ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -880,7 +879,6 @@ class _PlayScreenState
       {bool isPrimary = false}) {
 
     return SizedBox(
-
       height: 52,
 
       child:
@@ -1228,6 +1226,23 @@ class LearnScreen extends StatelessWidget {
             "From these 4 simple rules, incredible and complex patterns emerge. Go to the 'Play' tab, draw a shape, and see what happens when you press 'Let's Go!'",
             Icons.auto_awesome,
           ),
+          const SizedBox(height: 10),
+          const Divider(color: Colors.white10),
+          const SizedBox(height: 20),
+          const Text(
+            "FAQ",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          faqItem("Is this a game you play?", "It's known as a 'zero-player game'. You set up the initial configuration and watch how it evolves based on the rules without further input!"),
+          faqItem("Why is it called the 'Game of Life'?", "Created by mathematician John Conway in 1970, it perfectly simulates the life, death, and reproduction of biological cells using simple math."),
+          faqItem("What are Gliders?", "Gliders are special patterns of cells that move across the grid infinitely. They 'fly' diagonally across the board. Try drawing a small asymmetrical shape and see if it moves!"),
+          faqItem("Can I change the rules?", "Absolutely! Go to the 'Rules' tab to experiment. Changing the required neighbors for birth or survival creates entirely new and bizarre universes."),
         ],
       ),
     );
@@ -1263,6 +1278,42 @@ class LearnScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget faqItem(String question, String answer) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: ExpansionTile(
+        shape: const Border(), // Removes the default ExpansionTile borders
+        collapsedShape: const Border(),
+        iconColor: green,
+        collapsedIconColor: Colors.grey,
+        title: Text(
+          question,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                answer,
+                style: const TextStyle(color: Colors.white70, height: 1.5),
+              ),
             ),
           ),
         ],
