@@ -1147,7 +1147,7 @@ class LearnScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
-            "LEARN LAB",
+            "HOW IT WORKS",
             style: TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -1157,36 +1157,37 @@ class LearnScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            "Discover the secrets of the grid.",
+            "A quick guide for kids (and adults too!)",
             style: TextStyle(
               color: Colors.grey,
+              fontSize: 16,
             ),
           ),
           const SizedBox(height: 30),
           learnCard(
-            "A Single Player Game",
-            "You create the world and watch life grow.",
+            "1. Living Squares",
+            "Every green square on the grid is 'alive'. The dark squares are empty space.",
+            Icons.check_box,
+          ),
+          learnCard(
+            "2. Making Friends",
+            "Just like us, these squares need neighbors! If a square has 2 or 3 friends touching it, it stays alive.",
+            Icons.people,
+          ),
+          learnCard(
+            "3. Too Crowded or Lonely",
+            "If a square has less than 2 friends, it gets too lonely and disappears. If it has more than 3, it gets too crowded and disappears too!",
+            Icons.warning_rounded,
+          ),
+          learnCard(
+            "4. A New Baby Square!",
+            "If an empty space has exactly 3 living friends next to it, a brand new baby square is born right there!",
+            Icons.child_care,
+          ),
+          learnCard(
+            "5. You Are In Control",
+            "Go to the 'Play' tab, tap the grid to draw some living squares, and press 'Let's Go!' to watch them move and grow.",
             Icons.videogame_asset,
-          ),
-          learnCard(
-            "App Creator",
-            "This application is made by Randomwalk.ai",
-            Icons.person,
-          ),
-          learnCard(
-            "Living Cells",
-            "Every green square is a living cell.",
-            Icons.grid_on,
-          ),
-          learnCard(
-            "Neighbors Matter",
-            "Cells watch their 8 neighbors.",
-            Icons.group,
-          ),
-          learnCard(
-            "Why Beautiful?",
-            "Tiny rules can create endless moving worlds.",
-            Icons.auto_awesome,
           ),
         ],
       ),
@@ -1196,32 +1197,25 @@ class LearnScreen extends StatelessWidget {
   Widget learnCard(String title, String body, IconData icon) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.08), width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: green, size: 28),
-              const SizedBox(width: 12),
+              Icon(icon, color: green, size: 32),
+              const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   title,
                   style: const TextStyle(
                     color: green,
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1232,9 +1226,9 @@ class LearnScreen extends StatelessWidget {
           Text(
             body,
             style: const TextStyle(
-              color: Colors.grey,
-              height: 1.5,
-              fontSize: 15,
+              color: Colors.white70,
+              height: 1.6,
+              fontSize: 16,
             ),
           ),
         ],
