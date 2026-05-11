@@ -523,20 +523,90 @@ class _PlayScreenState
 
     timer?.cancel();
 
-    timer = Timer.periodic(
+    int aliveInit = 0;
+    for (int x = 0; x < size; x++) {
+      for (int y = 0; y < size; y++) {
+        if (grid[x][y] == 1) aliveInit++;
+      }
+    }
+    if (aliveInit == 0) {
+      _showGameOverDialog("EMPTY GRID", "Draw some living cells before starting the simulation!");
+      return;
+    }
 
+    timer = Timer.periodic(
       const Duration(
           milliseconds: 250),
-
           (_) {
-
+        List<List<int>> nextGrid = nextGeneration();
+        
+        bool isSame = true;
+        int aliveCount = 0;
+        for (int x = 0; x < size; x++) {
+          for (int y = 0; y < size; y++) {
+            if (grid[x][y] != nextGrid[x][y]) isSame = false;
+            if (nextGrid[x][y] == 1) aliveCount++;
+          }
+        }
+        
         setState(() {
-
           generation++;
-
-          grid =
-              nextGeneration();
+          grid = nextGrid;
         });
+        
+        if (aliveCount == 0) {
+          pause();
+          _showGameOverDialog("THE END", "All cells have died. Life faded away...\n\nYou Lose!");
+        } else if (isSame) {
+          pause();
+          _showGameOverDialog("STABILIZED!", "Life has found a stable balance.\n\nYou Win!");
+        }
+      },
+    );
+  }
+
+  void _showGameOverDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: card,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.white.withOpacity(0.05)),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: green,
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+              letterSpacing: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(color: Colors.grey, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                foregroundColor: bg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
       },
     );
   }
