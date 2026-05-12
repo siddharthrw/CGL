@@ -74,54 +74,90 @@ class _PlayScreenState extends State<PlayScreen> {
     timer = Timer.periodic(
       const Duration(milliseconds: 250),
       (_) {
-        List<List<int>> nextGrid = nextGeneration();
-
-        bool isSame = true;
-        int aliveCount = 0;
-        for (int x = 0; x < size; x++) {
-          for (int y = 0; y < size; y++) {
-            if (grid[x][y] != nextGrid[x][y]) isSame = false;
-            if (nextGrid[x][y] == 1) aliveCount++;
-          }
-        }
-
-        setState(() {
-          generation++;
-          grid = nextGrid;
-        });
-
-        String nextStr = _gridToString(nextGrid);
-        bool isOscillating = !isSame && history.contains(nextStr);
-
-        if (aliveCount == 0) {
-          pause();
-          setState(() {
-            gameEndTitle = "THE END";
-            gameEndMessage = "All cells have died. Life faded away... You Lose!";
-            isWin = false;
-          });
-        } else if (isSame) {
-          pause();
-          setState(() {
-            gameEndTitle = "STABILIZED!";
-            gameEndMessage = "Life has found a stable balance. You Win!";
-            isWin = true;
-          });
-        } else {
-          if (isOscillating) {
-            setState(() {
-              gameEndTitle = "ENDLESS LOOP!";
-              gameEndMessage = "The cells are trapped in a repeating pattern!";
-              isWin = true;
-            });
-          }
-          history.add(nextStr);
-          if (history.length > 25) {
-            history.removeAt(0);
-          }
-        }
+        _doTick();
       },
     );
+  }
+
+  void stepForward() {
+    pause();
+
+    int aliveInit = 0;
+    for (int x = 0; x < size; x++) {
+      for (int y = 0; y < size; y++) {
+        if (grid[x][y] == 1) aliveInit++;
+      }
+    }
+    
+    if (aliveInit == 0 && generation == 0) {
+      setState(() {
+        gameEndTitle = "EMPTY GRID";
+        gameEndMessage = "Draw some living cells before stepping!";
+        isWin = false;
+      });
+      return;
+    }
+
+    setState(() {
+      gameEndTitle = null;
+      gameEndMessage = null;
+      isWin = false;
+    });
+
+    if (history.isEmpty) {
+      history.add(_gridToString(grid));
+    }
+
+    _doTick();
+  }
+
+  void _doTick() {
+    List<List<int>> nextGrid = nextGeneration();
+
+    bool isSame = true;
+    int aliveCount = 0;
+    for (int x = 0; x < size; x++) {
+      for (int y = 0; y < size; y++) {
+        if (grid[x][y] != nextGrid[x][y]) isSame = false;
+        if (nextGrid[x][y] == 1) aliveCount++;
+      }
+    }
+
+    setState(() {
+      generation++;
+      grid = nextGrid;
+    });
+
+    String nextStr = _gridToString(nextGrid);
+    bool isOscillating = !isSame && history.contains(nextStr);
+
+    if (aliveCount == 0) {
+      pause();
+      setState(() {
+        gameEndTitle = "THE END";
+        gameEndMessage = "All cells have died. Life faded away... You Lose!";
+        isWin = false;
+      });
+    } else if (isSame) {
+      pause();
+      setState(() {
+        gameEndTitle = "STABILIZED!";
+        gameEndMessage = "Life has found a stable balance. You Win!";
+        isWin = true;
+      });
+    } else {
+      if (isOscillating) {
+        setState(() {
+          gameEndTitle = "ENDLESS LOOP!";
+          gameEndMessage = "The cells are trapped in a repeating pattern!";
+          isWin = true;
+        });
+      }
+      history.add(nextStr);
+      if (history.length > 25) {
+        history.removeAt(0);
+      }
+    }
   }
 
   void pause() {
@@ -235,43 +271,65 @@ class _PlayScreenState extends State<PlayScreen> {
                   ),
                   const SizedBox(height: 20),
                   Expanded(
-                    child: GridView.builder(
-                      key: widget.gridKey,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: size * size,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: size,
-                      ),
-                      itemBuilder: (context, index) {
-                        int row = index ~/ size;
-                        int col = index % size;
-                        bool alive = grid[row][col] == 1;
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        double cellWidth = constraints.maxWidth / size;
                         return GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            setState(() {
-                              grid[row][col] = 1 - grid[row][col];
-                              gameEndTitle = null;
-                              gameEndMessage = null;
-                              isWin = false;
-                              history.clear();
-                            });
+                          onPanUpdate: (details) {
+                            int col = (details.localPosition.dx / cellWidth).floor();
+                            int row = (details.localPosition.dy / cellWidth).floor();
+                            if (row >= 0 && row < size && col >= 0 && col < size) {
+                              if (grid[row][col] == 0) {
+                                setState(() {
+                                  grid[row][col] = 1;
+                                  gameEndTitle = null;
+                                  gameEndMessage = null;
+                                  isWin = false;
+                                  history.clear();
+                                });
+                              }
+                            }
                           },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            margin: const EdgeInsets.all(1.5),
-                            decoration: BoxDecoration(
-                              color: alive ? green : card,
-                              borderRadius: BorderRadius.circular(4),
-                              boxShadow: alive
-                                  ? [
-                                      BoxShadow(
-                                        color: green.withOpacity(.5),
-                                        blurRadius: 8,
-                                      )
-                                    ]
-                                  : [],
+                          child: GridView.builder(
+                            key: widget.gridKey,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: size * size,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: size,
                             ),
+                            itemBuilder: (context, index) {
+                              int row = index ~/ size;
+                              int col = index % size;
+                              bool alive = grid[row][col] == 1;
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  setState(() {
+                                    grid[row][col] = 1 - grid[row][col];
+                                    gameEndTitle = null;
+                                    gameEndMessage = null;
+                                    isWin = false;
+                                    history.clear();
+                                  });
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 250),
+                                  margin: const EdgeInsets.all(1.5),
+                                  decoration: BoxDecoration(
+                                    color: alive ? green : card,
+                                    borderRadius: BorderRadius.circular(4),
+                                    boxShadow: alive
+                                        ? [
+                                            BoxShadow(
+                                              color: green.withOpacity(.5),
+                                              blurRadius: 8,
+                                            )
+                                          ]
+                                        : [],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
@@ -340,14 +398,23 @@ class _PlayScreenState extends State<PlayScreen> {
               children: [
                 Expanded(
                   child: actionButton(
-                    "Let's Go!",
+                    "Play",
                     Icons.play_arrow,
                     start,
                     isPrimary: true,
                     key: widget.playBtnKey,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: actionButton(
+                    "Step",
+                    Icons.skip_next,
+                    stepForward,
+                    isPrimary: false,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: actionButton(
                     "Pause",
@@ -356,7 +423,7 @@ class _PlayScreenState extends State<PlayScreen> {
                     isPrimary: false,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: actionButton(
                     "Clear",
@@ -393,7 +460,7 @@ class _PlayScreenState extends State<PlayScreen> {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           backgroundColor: isPrimary ? green : card,
           foregroundColor: isPrimary ? bg : Colors.white,
           elevation: isPrimary ? 8 : 0,
