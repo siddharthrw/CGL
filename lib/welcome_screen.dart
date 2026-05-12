@@ -210,7 +210,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                         child: const Text(
-                          "PLAY NOW",
+                          "ENTER GRID",
                           style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
                         ),
                       ),
