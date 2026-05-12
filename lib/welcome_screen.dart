@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'theme.dart';
 import 'home_screen.dart';
@@ -38,38 +39,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       (_) => List.generate(bgCols, (_) => random.nextDouble() < 0.25 ? 1 : 0),
     );
 
-    bgTimer = Timer.periodic(const Duration(milliseconds: 600), (_) {
+    bgTimer = Timer.periodic(const Duration(milliseconds: 600), (_) async {
+      if (!mounted) return;
+      // Send the heavy calculation to a background worker
+      final newGrid = await compute(_calculateNextGenInIsolate, bgGrid);
       if (mounted) {
         setState(() {
-          bgGrid = _nextGen(bgGrid);
+          bgGrid = newGrid;
         });
       }
     });
-  }
-
-  List<List<int>> _nextGen(List<List<int>> currentGrid) {
-    List<List<int>> next = List.generate(bgRows, (_) => List.filled(bgCols, 0));
-    for (int r = 0; r < bgRows; r++) {
-      for (int c = 0; c < bgCols; c++) {
-        int neighbors = 0;
-        for (int dr = -1; dr <= 1; dr++) {
-          for (int dc = -1; dc <= 1; dc++) {
-            if (dr == 0 && dc == 0) continue;
-            int nr = r + dr;
-            int nc = c + dc;
-            if (nr >= 0 && nr < bgRows && nc >= 0 && nc < bgCols) {
-              neighbors += currentGrid[nr][nc];
-            }
-          }
-        }
-        if (currentGrid[r][c] == 1) {
-          next[r][c] = (neighbors == 2 || neighbors == 3) ? 1 : 0;
-        } else {
-          next[r][c] = (neighbors == 3) ? 1 : 0;
-        }
-      }
-    }
-    return next;
   }
 
   @override
@@ -274,4 +253,33 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       ),
     );
   }
+}
+
+// Top-level function that runs in a background Isolate to prevent UI jank
+List<List<int>> _calculateNextGenInIsolate(List<List<int>> currentGrid) {
+  if (currentGrid.isEmpty) return currentGrid;
+  int rows = currentGrid.length;
+  int cols = currentGrid[0].length;
+  List<List<int>> next = List.generate(rows, (_) => List.filled(cols, 0));
+  for (int r = 0; r < rows; r++) {
+    for (int c = 0; c < cols; c++) {
+      int neighbors = 0;
+      for (int dr = -1; dr <= 1; dr++) {
+        for (int dc = -1; dc <= 1; dc++) {
+          if (dr == 0 && dc == 0) continue;
+          int nr = r + dr;
+          int nc = c + dc;
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+            neighbors += currentGrid[nr][nc];
+          }
+        }
+      }
+      if (currentGrid[r][c] == 1) {
+        next[r][c] = (neighbors == 2 || neighbors == 3) ? 1 : 0;
+      } else {
+        next[r][c] = (neighbors == 3) ? 1 : 0;
+      }
+    }
+  }
+  return next;
 }
