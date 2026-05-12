@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'theme.dart';
 import 'home_screen.dart';
@@ -44,43 +45,49 @@ class _TutorialScreenState extends State<TutorialScreen> {
                 },
                 children: [
                   _buildSlide(
-                    icon: Icons.info_outline,
+                    visual: const _MiniDemo(frames: _toad, crossAxisCount: 6),
                     title: "About the Game",
                     description:
-                        "Conway's Game of Life isn't a typical game. It's a 'zero-player game'. You create the initial setup, and the world evolves entirely by itself based on simple mathematical rules.",
+                        "Conway's Game of Life is a fascinating 'zero-player game'. As the creator, you populate the grid with an initial pattern of cells. Once you start the simulation, the world evolves entirely on its own based on pure mathematics.",
                   ),
                   _buildSlide(
-                    icon: Icons.grid_on,
-                    title: "The Grid",
+                    visual: const _MiniDemo(frames: _drawing, crossAxisCount: 5),
+                    title: "The Grid & Cells",
                     description:
-                        "The simulation takes place on a grid of cells. Tap any dark square to bring a cell to life. Once you've drawn your pattern, press 'Let's Go!' to watch the evolution.",
+                        "The universe is an infinite 2D grid. Each square is a 'cell' that can either be Alive (bright green) or Dead (dark space).\n\nBefore running the simulation, simply tap the squares to draw your starting community.",
                   ),
                   _buildSlide(
-                    icon: Icons.rule,
-                    title: "The Rules",
+                    visual: const _MiniDemo(frames: _blinker, crossAxisCount: 5),
+                    title: "The Rules of Life",
                     description:
-                        "Cells die if they get too lonely or too crowded. They survive if they have just the right amount of neighbors, and empty spaces can even birth new cells in perfect conditions!",
+                        "Every generation, cells check their 8 surrounding neighbors to see what happens next:\n\n• Survival: 2 or 3 neighbors (Perfect)\n• Death: < 2 (Lonely) or > 3 (Crowded)\n• Birth: Exactly 3 neighbors creates a new cell!",
+                  ),
+                  _buildSlide(
+                    visual: const _MiniDemo(frames: _glider, crossAxisCount: 5),
+                    title: "Endless Possibilities",
+                    description:
+                        "From these simple rules, magical behaviors emerge. You will discover shapes that sit still, patterns that oscillate forever, and 'spaceships' that glide across the board.\n\nDraw, experiment, and see what you can create!",
                   ),
                   _buildFinalSlide(),
                 ],
               ),
             ),
             // Bottom Navigation Indicators
-            if (_currentPage != 3)
+            if (_currentPage != 4)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () => _controller.jumpToPage(3),
+                      onPressed: () => _controller.jumpToPage(4),
                       child: const Text(
                         "SKIP",
                         style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                     ),
                     Row(
-                      children: List.generate(4, (index) => _buildDot(index)),
+                      children: List.generate(5, (index) => _buildDot(index)),
                     ),
                     TextButton(
                       onPressed: () {
@@ -105,13 +112,13 @@ class _TutorialScreenState extends State<TutorialScreen> {
     );
   }
 
-  Widget _buildSlide({required IconData icon, required String title, required String description}) {
+  Widget _buildSlide({required Widget visual, required String title, required String description}) {
     return Padding(
       padding: const EdgeInsets.all(40.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 100, color: green),
+          visual,
           const SizedBox(height: 40),
           Text(
             title,
@@ -125,9 +132,9 @@ class _TutorialScreenState extends State<TutorialScreen> {
           const SizedBox(height: 20),
           Text(
             description,
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             style: const TextStyle(
-              color: Colors.grey,
+              color: Colors.white70,
               fontSize: 16,
               height: 1.5,
             ),
@@ -201,3 +208,89 @@ class _TutorialScreenState extends State<TutorialScreen> {
     );
   }
 }
+
+class _MiniDemo extends StatefulWidget {
+  final List<List<int>> frames;
+  final int crossAxisCount;
+
+  const _MiniDemo({required this.frames, this.crossAxisCount = 5});
+
+  @override
+  State<_MiniDemo> createState() => _MiniDemoState();
+}
+
+class _MiniDemoState extends State<_MiniDemo> {
+  int _currentIndex = 0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 600), (timer) {
+      if (mounted && widget.frames.length > 1) {
+        setState(() {
+          _currentIndex = (_currentIndex + 1) % widget.frames.length;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final frame = widget.frames[_currentIndex];
+    return SizedBox(
+      width: 140,
+      height: 140,
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: widget.crossAxisCount,
+        ),
+        itemCount: frame.length,
+        itemBuilder: (context, index) {
+          bool alive = frame[index] == 1;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            margin: const EdgeInsets.all(2.0),
+            decoration: BoxDecoration(
+              color: alive ? green : card,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: alive ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)] : [],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Demo Patterns
+const _toad = [
+  [0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,1,1,1,0, 0,1,1,1,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0],
+  [0,0,0,0,0,0, 0,0,0,1,0,0, 0,1,0,0,1,0, 0,1,0,0,1,0, 0,0,1,0,0,0, 0,0,0,0,0,0],
+];
+
+const _drawing = [
+  [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,0,0,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,0,0,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,1,1,1,0, 0,0,0,0,0],
+];
+
+const _blinker = [
+  [0,0,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0],
+  [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
+];
+
+const _glider = [
+  [0,0,1,0,0, 1,0,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,1,0,0,0, 0,1,1,0,0, 1,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,0,0,0,0, 0,1,0,1,0, 0,0,1,1,0, 0,0,1,0,0, 0,0,0,0,0],
+];
