@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const LifeLab());
@@ -288,6 +290,164 @@ class _HomeScreenState
   int surviveMin = 2;
   int surviveMax = 3;
 
+  final GlobalKey gridKey = GlobalKey();
+  final GlobalKey playBtnKey = GlobalKey();
+  final GlobalKey rulesTabKey = GlobalKey();
+  final GlobalKey learnTabKey = GlobalKey();
+  late TutorialCoachMark tutorialCoachMark;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFirstTime();
+  }
+
+  Future<void> _checkFirstTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool hasSeenTutorial = prefs.getBool('hasSeenTutorial') ?? false;
+    
+    if (!hasSeenTutorial) {
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted && currentTab == 0) {
+          showTutorial();
+          prefs.setBool('hasSeenTutorial', true);
+        }
+      });
+    }
+  }
+
+  void showTutorial() {
+    if (currentTab != 0) {
+      setState(() => currentTab = 0);
+      Future.delayed(const Duration(milliseconds: 300), _initTutorial);
+    } else {
+      _initTutorial();
+    }
+  }
+
+  void _initTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: _createTargets(),
+      colorShadow: bg,
+      textSkip: "SKIP",
+      paddingFocus: 10,
+      opacityShadow: 0.9,
+    )..show(context: context);
+  }
+
+  List<TargetFocus> _createTargets() {
+    return [
+      TargetFocus(
+        identify: "gridKey",
+        keyTarget: gridKey,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "1. The Grid",
+                    style: TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Tap these squares to bring cells to life (green). Empty squares are dead space.",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "playBtnKey",
+        keyTarget: playBtnKey,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "2. Start Simulation",
+                    style: TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Once you've drawn your pattern, tap here to watch the cells evolve!",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "rulesTabKey",
+        keyTarget: rulesTabKey,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "3. Change the Laws",
+                    style: TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Go here to tweak the rules of life (how many neighbors are needed for birth and survival).",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "learnTabKey",
+        keyTarget: learnTabKey,
+        alignSkip: Alignment.topRight,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "4. Learn More",
+                    style: TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "Check out this tab to learn how Conway's Game of Life works and what to look out for!",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -297,6 +457,9 @@ class _HomeScreenState
         birthRule: birthRule,
         surviveMin: surviveMin,
         surviveMax: surviveMax,
+        gridKey: gridKey,
+        playBtnKey: playBtnKey,
+        onHelpTap: showTutorial,
       ),
 
       RulesScreen(
@@ -365,12 +528,12 @@ class _HomeScreenState
             navItem(
                 1,
                 Icons.tune,
-                "Rules"),
+                "Rules", key: rulesTabKey),
 
             navItem(
                 2,
                 Icons.school,
-                "Learn"),
+                "Learn", key: learnTabKey),
           ],
               ),
             ),
@@ -383,12 +546,14 @@ class _HomeScreenState
   Widget navItem(
       int index,
       IconData icon,
-      String label) {
+      String label,
+      {Key? key}) {
 
     bool active =
         currentTab == index;
 
     return GestureDetector(
+      key: key,
       onTap: () {
 
         setState(() {
@@ -481,6 +646,9 @@ class PlayScreen extends StatefulWidget {
   final int birthRule;
   final int surviveMin;
   final int surviveMax;
+  final GlobalKey gridKey;
+  final GlobalKey playBtnKey;
+  final VoidCallback onHelpTap;
 
   const PlayScreen({
 
@@ -489,6 +657,9 @@ class PlayScreen extends StatefulWidget {
     required this.birthRule,
     required this.surviveMin,
     required this.surviveMax,
+    required this.gridKey,
+    required this.playBtnKey,
+    required this.onHelpTap,
   });
 
   @override
@@ -737,15 +908,26 @@ class _PlayScreenState
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.help_outline, color: green),
+                            onPressed: widget.onHelpTap,
+                            tooltip: "Tutorial",
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             "GEN $generation",
                             style: const TextStyle(color: Colors.grey),
                           ),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
                   Expanded(
                     child: GridView.builder(
+                      key: widget.gridKey,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: size * size,
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -844,6 +1026,7 @@ class _PlayScreenState
                     Icons.play_arrow,
                     start,
                     isPrimary: true,
+                    key: widget.playBtnKey,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -876,9 +1059,10 @@ class _PlayScreenState
       String text,
       IconData icon,
       VoidCallback onTap,
-      {bool isPrimary = false}) {
+      {bool isPrimary = false, Key? key}) {
 
     return SizedBox(
+      key: key,
       height: 52,
 
       child:
