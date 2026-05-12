@@ -81,6 +81,26 @@ class RulesScreen extends StatelessWidget {
             "🧪 TRY THIS",
             "Change the rules and watch life evolve differently.",
           ),
+
+          const SizedBox(height: 24),
+
+          OutlinedButton.icon(
+            onPressed: () {
+              onBirthChanged(3);
+              onSurviveMinChanged(2);
+              onSurviveMaxChanged(3);
+            },
+            icon: const Icon(Icons.restore),
+            label: const Text("Reset to Standard Rules", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: green,
+              side: const BorderSide(color: green, width: 2),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
         ],
       ),
     );
