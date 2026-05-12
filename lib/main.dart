@@ -328,11 +328,48 @@ class _HomeScreenState
   void _initTutorial() {
     tutorialCoachMark = TutorialCoachMark(
       targets: _createTargets(),
-      colorShadow: bg,
+      colorShadow: Colors.black, // Pure black for better contrast
       textSkip: "SKIP",
-      paddingFocus: 10,
-      opacityShadow: 0.9,
+      paddingFocus: 15,
+      opacityShadow: 0.96, // Much darker to hide background text entirely
+      focusAnimationDuration: const Duration(milliseconds: 600), // Smooth slide
+      unFocusAnimationDuration: const Duration(milliseconds: 600),
+      pulseAnimationDuration: const Duration(milliseconds: 1000), // Softer pulse
     )..show(context: context);
+  }
+
+  // A custom widget to make the tutorial text look like a stylized tooltip card
+  Widget _buildTutorialContent(String title, String body) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: card, // Solid background so text doesn't merge with the app
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: green.withOpacity(0.5), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.8),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(color: green, fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            body,
+            style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
+          ),
+        ],
+      ),
+    );
   }
 
   List<TargetFocus> _createTargets() {
@@ -341,24 +378,15 @@ class _HomeScreenState
         identify: "gridKey",
         keyTarget: gridKey,
         alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 12,
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
             builder: (context, controller) {
-              return const Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "1. The Grid",
-                    style: TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "Tap these squares to bring cells to life (green). Empty squares are dead space.",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ],
+              return _buildTutorialContent(
+                "1. The Grid",
+                "Tap these squares to bring cells to life (green). Empty squares are dead space.",
               );
             },
           ),
@@ -368,24 +396,15 @@ class _HomeScreenState
         identify: "playBtnKey",
         keyTarget: playBtnKey,
         alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 16,
         contents: [
           TargetContent(
             align: ContentAlign.top,
             builder: (context, controller) {
-              return const Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "2. Start Simulation",
-                    style: TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "Once you've drawn your pattern, tap here to watch the cells evolve!",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ],
+              return _buildTutorialContent(
+                "2. Start Simulation",
+                "Once you've drawn your pattern, tap here to watch the cells evolve!",
               );
             },
           ),
@@ -395,24 +414,14 @@ class _HomeScreenState
         identify: "rulesTabKey",
         keyTarget: rulesTabKey,
         alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.Circle, // Highlights the tab with a perfect circle
         contents: [
           TargetContent(
             align: ContentAlign.top,
             builder: (context, controller) {
-              return const Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "3. Change the Laws",
-                    style: TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "Go here to tweak the rules of life (how many neighbors are needed for birth and survival).",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ],
+              return _buildTutorialContent(
+                "3. Change the Laws",
+                "Go here to tweak the rules of life (how many neighbors are needed for birth and survival).",
               );
             },
           ),
@@ -422,24 +431,14 @@ class _HomeScreenState
         identify: "learnTabKey",
         keyTarget: learnTabKey,
         alignSkip: Alignment.topRight,
+        shape: ShapeLightFocus.Circle, // Highlights the tab with a perfect circle
         contents: [
           TargetContent(
             align: ContentAlign.top,
             builder: (context, controller) {
-              return const Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "4. Learn More",
-                    style: TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "Check out this tab to learn how Conway's Game of Life works and what to look out for!",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ],
+              return _buildTutorialContent(
+                "4. Learn More",
+                "Check out this tab to learn how Conway's Game of Life works and what to look out for!",
               );
             },
           ),
