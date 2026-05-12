@@ -79,38 +79,6 @@ class _PlayScreenState extends State<PlayScreen> {
     );
   }
 
-  void stepForward() {
-    pause();
-
-    int aliveInit = 0;
-    for (int x = 0; x < size; x++) {
-      for (int y = 0; y < size; y++) {
-        if (grid[x][y] == 1) aliveInit++;
-      }
-    }
-    
-    if (aliveInit == 0 && generation == 0) {
-      setState(() {
-        gameEndTitle = "EMPTY GRID";
-        gameEndMessage = "Draw some living cells before stepping!";
-        isWin = false;
-      });
-      return;
-    }
-
-    setState(() {
-      gameEndTitle = null;
-      gameEndMessage = null;
-      isWin = false;
-    });
-
-    if (history.isEmpty) {
-      history.add(_gridToString(grid));
-    }
-
-    _doTick();
-  }
-
   void _doTick() {
     List<List<int>> nextGrid = nextGeneration();
 
@@ -403,15 +371,6 @@ class _PlayScreenState extends State<PlayScreen> {
                     start,
                     isPrimary: true,
                     key: widget.playBtnKey,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: actionButton(
-                    "Step",
-                    Icons.skip_next,
-                    stepForward,
-                    isPrimary: false,
                   ),
                 ),
                 const SizedBox(width: 8),
