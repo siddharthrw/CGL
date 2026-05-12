@@ -74,7 +74,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
               ),
             ),
             // Bottom Navigation Indicators
-            if (_currentPage < 4)
+            if (_currentPage != 5)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
                 child: Row(
@@ -321,11 +321,10 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
     timer?.cancel();
     setState(() {
       grid = List.generate(size, (_) => List.filled(size, 0));
-      // Pre-draw a simple "block" pattern
+      // Pre-draw a simple pattern to evolve
       grid[4][4] = 1;
       grid[4][5] = 1;
       grid[5][4] = 1;
-      grid[5][5] = 1;
       _step = _DemoStep.pressPlay;
     });
   }
@@ -337,20 +336,25 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
       _step = _DemoStep.watch;
     });
 
-    // This pattern is stable, so it will "win" on the first check.
-    timer = Timer(const Duration(milliseconds: 500), () {
+    timer = Timer.periodic(const Duration(milliseconds: 300), (t) {
       final nextGrid = _nextGeneration();
       bool isSame = true;
+      int aliveCount = 0;
       for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
           if (grid[i][j] != nextGrid[i][j]) {
             isSame = false;
-            break;
           }
+          if (nextGrid[i][j] == 1) aliveCount++;
         }
       }
 
-      if (isSame) {
+      setState(() {
+        grid = nextGrid;
+      });
+
+      if (isSame || aliveCount == 0) {
+        timer?.cancel();
         setState(() {
           _step = _DemoStep.win;
         });
@@ -397,11 +401,11 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
   String get _instructionText {
     switch (_step) {
       case _DemoStep.pressPlay:
-        return "This is a 'still life' pattern. Press 'Play Demo' to see what happens when a pattern is perfectly stable.";
+        return "Tap the squares to draw a pattern, then press 'Play Demo'!";
       case _DemoStep.watch:
-        return "The simulation is running... but nothing is changing. This pattern has reached equilibrium.";
+        return "Simulation is running... Observe how the cells evolve.";
       case _DemoStep.win:
-        return "It's stable! When a pattern stops changing, it survives forever. This is one way to win the Game of Life.";
+        return "Simulation ended! It either stabilized or all cells died. Press 'Next' below to continue.";
     }
   }
 
@@ -447,45 +451,55 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
                 int row = index ~/ size;
                 int col = index % size;
                 bool alive = grid[row][col] == 1;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  margin: const EdgeInsets.all(1.5),
-                  decoration: BoxDecoration(
-                    color: alive ? green : card,
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: alive
-                        ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)]
-                        : [],
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    if (_step == _DemoStep.watch) return;
+                    setState(() {
+                      grid[row][col] = 1 - grid[row][col];
+                      _step = _DemoStep.pressPlay;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: const EdgeInsets.all(1.5),
+                    decoration: BoxDecoration(
+                      color: alive ? green : card,
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: alive
+                          ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)]
+                          : [],
+                    ),
                   ),
                 );
               },
             ),
           ),
           const SizedBox(height: 30),
-          if (_step == _DemoStep.pressPlay)
-            ElevatedButton.icon(
-              onPressed: _play,
-              icon: const Icon(Icons.play_arrow),
-              label: const Text("Play Demo"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: green,
-                foregroundColor: bg,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              ),
-            ),
-          if (_step == _DemoStep.win)
-            OutlinedButton.icon(
-              onPressed: _reset,
-              icon: const Icon(Icons.refresh),
-              label: const Text("Reset Demo"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: green,
-                side: const BorderSide(color: green),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              ),
-            ),
-          if (_step == _DemoStep.watch)
-            const SizedBox(height: 50), // Placeholder to keep layout consistent
+          SizedBox(
+            height: 48,
+            child: _step == _DemoStep.pressPlay
+                ? ElevatedButton.icon(
+                    onPressed: _play,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text("Play Demo"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: green,
+                      foregroundColor: bg,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    ),
+                  )
+                : OutlinedButton.icon(
+                    onPressed: _reset,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text("Reset Demo"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: green,
+                      side: const BorderSide(color: green),
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
