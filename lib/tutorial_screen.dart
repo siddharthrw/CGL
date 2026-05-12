@@ -68,26 +68,27 @@ class _TutorialScreenState extends State<TutorialScreen> {
                     description:
                         "From these simple rules, magical behaviors emerge. You will discover shapes that sit still, patterns that oscillate forever, and 'spaceships' that glide across the board.\n\nDraw, experiment, and see what you can create!",
                   ),
+                  const _InteractiveDemoSlide(),
                   _buildFinalSlide(),
                 ],
               ),
             ),
             // Bottom Navigation Indicators
-            if (_currentPage != 4)
+            if (_currentPage < 4)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () => _controller.jumpToPage(4),
+                      onPressed: () => _controller.jumpToPage(5), // Jump to last slide
                       child: const Text(
                         "SKIP",
                         style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                     ),
                     Row(
-                      children: List.generate(5, (index) => _buildDot(index)),
+                      children: List.generate(6, (index) => _buildDot(index)),
                     ),
                     TextButton(
                       onPressed: () {
@@ -105,7 +106,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
                 ),
               )
             else
-              const SizedBox(height: 108), // To keep the layout balanced on the final slide
+              const SizedBox(height: 78), // To keep the layout balanced on the final slide
           ],
         ),
       ),
@@ -163,31 +164,31 @@ class _TutorialScreenState extends State<TutorialScreen> {
           ),
           const SizedBox(height: 20),
           const Text(
-            "You now know everything you need to begin creating complex patterns.",
+            "We highly recommend reading the full 'Learn' guide to master the rules before playing!",
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 16, height: 1.5),
           ),
           const SizedBox(height: 50),
           ElevatedButton(
-            onPressed: () => _finishTutorial(0), // Tab 0 = Play
+            onPressed: () => _finishTutorial(2), // Tab 2 = Learn
             style: ElevatedButton.styleFrom(
               backgroundColor: green,
               foregroundColor: bg,
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            child: const Text("PLAY GAME", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            child: const Text("LEARN MORE", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
           ),
           const SizedBox(height: 16),
           OutlinedButton(
-            onPressed: () => _finishTutorial(2), // Tab 2 = Learn Lab
+            onPressed: () => _finishTutorial(0), // Tab 0 = Play Game
             style: OutlinedButton.styleFrom(
               foregroundColor: green,
               side: const BorderSide(color: green, width: 2),
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            child: const Text("LEARN MORE", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            child: const Text("PLAY GAME", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
           ),
         ],
       ),
@@ -294,3 +295,199 @@ const _glider = [
   [0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
   [0,0,0,0,0, 0,1,0,1,0, 0,0,1,1,0, 0,0,1,0,0, 0,0,0,0,0],
 ];
+
+class _InteractiveDemoSlide extends StatefulWidget {
+  const _InteractiveDemoSlide();
+
+  @override
+  State<_InteractiveDemoSlide> createState() => _InteractiveDemoSlideState();
+}
+
+enum _DemoStep { pressPlay, watch, win }
+
+class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
+  final int size = 10;
+  late List<List<int>> grid;
+  Timer? timer;
+  _DemoStep _step = _DemoStep.pressPlay;
+
+  @override
+  void initState() {
+    super.initState();
+    _reset();
+  }
+
+  void _reset() {
+    timer?.cancel();
+    setState(() {
+      grid = List.generate(size, (_) => List.filled(size, 0));
+      // Pre-draw a simple "block" pattern
+      grid[4][4] = 1;
+      grid[4][5] = 1;
+      grid[5][4] = 1;
+      grid[5][5] = 1;
+      _step = _DemoStep.pressPlay;
+    });
+  }
+
+  void _play() {
+    if (_step != _DemoStep.pressPlay) return;
+
+    setState(() {
+      _step = _DemoStep.watch;
+    });
+
+    // This pattern is stable, so it will "win" on the first check.
+    timer = Timer(const Duration(milliseconds: 500), () {
+      final nextGrid = _nextGeneration();
+      bool isSame = true;
+      for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+          if (grid[i][j] != nextGrid[i][j]) {
+            isSame = false;
+            break;
+          }
+        }
+      }
+
+      if (isSame) {
+        setState(() {
+          _step = _DemoStep.win;
+        });
+      }
+    });
+  }
+
+  List<List<int>> _nextGeneration() {
+    List<List<int>> newGrid = List.generate(size, (_) => List.filled(size, 0));
+    for (int x = 0; x < size; x++) {
+      for (int y = 0; y < size; y++) {
+        int n = _countNeighbors(x, y);
+        if (grid[x][y] == 1) {
+          if (n == 2 || n == 3) newGrid[x][y] = 1;
+        } else {
+          if (n == 3) newGrid[x][y] = 1;
+        }
+      }
+    }
+    return newGrid;
+  }
+
+  int _countNeighbors(int x, int y) {
+    int count = 0;
+    for (int dx = -1; dx <= 1; dx++) {
+      for (int dy = -1; dy <= 1; dy++) {
+        if (dx == 0 && dy == 0) continue;
+        int nx = x + dx;
+        int ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < size && ny < size) {
+          count += grid[nx][ny];
+        }
+      }
+    }
+    return count;
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  String get _instructionText {
+    switch (_step) {
+      case _DemoStep.pressPlay:
+        return "This is a 'still life' pattern. Press 'Play Demo' to see what happens when a pattern is perfectly stable.";
+      case _DemoStep.watch:
+        return "The simulation is running... but nothing is changing. This pattern has reached equilibrium.";
+      case _DemoStep.win:
+        return "It's stable! When a pattern stops changing, it survives forever. This is one way to win the Game of Life.";
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            "Interactive Demo",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 80,
+            child: Text(
+              _instructionText,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                height: 1.5,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 250,
+            height: 250,
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: size,
+              ),
+              itemCount: size * size,
+              itemBuilder: (context, index) {
+                int row = index ~/ size;
+                int col = index % size;
+                bool alive = grid[row][col] == 1;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.all(1.5),
+                  decoration: BoxDecoration(
+                    color: alive ? green : card,
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: alive
+                        ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)]
+                        : [],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 30),
+          if (_step == _DemoStep.pressPlay)
+            ElevatedButton.icon(
+              onPressed: _play,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text("Play Demo"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                foregroundColor: bg,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+            ),
+          if (_step == _DemoStep.win)
+            OutlinedButton.icon(
+              onPressed: _reset,
+              icon: const Icon(Icons.refresh),
+              label: const Text("Reset Demo"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: green,
+                side: const BorderSide(color: green),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+            ),
+          if (_step == _DemoStep.watch)
+            const SizedBox(height: 50), // Placeholder to keep layout consistent
+        ],
+      ),
+    );
+  }
+}
