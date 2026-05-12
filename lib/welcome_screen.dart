@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'theme.dart';
 import 'home_screen.dart';
+import 'tutorial_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -173,58 +174,71 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   style: TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 50),
-                SizedBox(
-                  width: 200,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        PageRouteBuilder(
-                          transitionDuration: const Duration(milliseconds: 800),
-                          pageBuilder: (_, __, ___) => const HomeScreen(),
-                          transitionsBuilder: (_, animation, __, child) {
-                            return FadeTransition(
-                              opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                  .animate(
-                                CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeInOut,
-                                ),
-                              ),
-                              child: ScaleTransition(
-                                scale: Tween<double>(
-                                  begin: 0.85,
-                                  end: 1.0,
-                                ).animate(
-                                  CurvedAnimation(
-                                    parent: animation,
-                                    curve: Curves.easeOutCubic,
+                Column(
+                  children: [
+                    SizedBox(
+                      width: 240,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            PageRouteBuilder(
+                              transitionDuration: const Duration(milliseconds: 800),
+                              pageBuilder: (_, __, ___) => const HomeScreen(initialTab: 0),
+                              transitionsBuilder: (_, animation, __, child) {
+                                return FadeTransition(
+                                  opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                                    CurvedAnimation(parent: animation, curve: Curves.easeInOut),
                                   ),
-                                ),
-                                child: child,
-                              ),
-                            );
-                          },
+                                  child: ScaleTransition(
+                                    scale: Tween<double>(begin: 0.85, end: 1.0).animate(
+                                      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                                    ),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: green,
+                          foregroundColor: bg,
+                          elevation: 10,
+                          shadowColor: green.withOpacity(0.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: green,
-                      foregroundColor: bg,
-                      elevation: 10,
-                      shadowColor: green.withOpacity(0.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        child: const Text(
+                          "PLAY NOW",
+                          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      "ENTER THE GRID",
-                      style: TextStyle(
-                          fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: 240,
+                      height: 56,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TutorialScreen()),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: green,
+                          side: const BorderSide(color: green, width: 2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
+                        child: const Text(
+                          "START TUTORIAL",
+                          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                        ),
+                      ),
                     ),
-                  ),
-                )
+                  ],
+                ),
               ],
             ),
           ),

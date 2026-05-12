@@ -9,14 +9,15 @@ import 'rules_screen.dart';
 import 'learn_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int initialTab;
+  const HomeScreen({super.key, this.initialTab = 0});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int currentTab = 0;
+  late int currentTab;
 
   int birthRule = 3;
   int surviveMin = 2;
@@ -31,21 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _checkFirstTime();
-  }
-
-  Future<void> _checkFirstTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    bool hasSeenTutorial = prefs.getBool('hasSeenTutorial') ?? false;
-
-    if (!hasSeenTutorial) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted && currentTab == 0) {
-          showTutorial();
-          prefs.setBool('hasSeenTutorial', true);
-        }
-      });
-    }
+    currentTab = widget.initialTab;
   }
 
   void showTutorial() {
