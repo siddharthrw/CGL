@@ -1,5 +1,9 @@
 # Life Lab: Conway's Game of Life
 
+<p align="center">
+  <img src="lib/assets/gif_readme.gif" alt="Life Lab Gameplay Demo" width="600" />
+</p>
+
 A beautiful, interactive, and fully-featured Flutter implementation of Conway's Game of Life. 
 
 This project explores cellular automata through a modern, responsive UI. It goes beyond the classic rules, allowing users to tweak birth and survival conditions to discover alternate universes (like HighLife), all while providing an intuitive onboarding experience for newcomers.
@@ -76,5 +80,3 @@ The `test/` directory mirrors the `lib/` directory precisely:
 - **shared_preferences** - For persisting the first-time user tutorial state.
 - **tutorial_coach_mark** - For creating the interactive user onboarding overlay.
 - **flutter_launcher_icons** - For custom app iconography.
-
-
