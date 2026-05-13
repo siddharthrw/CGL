@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'theme.dart';
 
@@ -8,7 +9,9 @@ class PlayScreen extends StatefulWidget {
   final int surviveMax;
   final GlobalKey gridKey;
   final GlobalKey playBtnKey;
+  final GlobalKey ruleLabBtnKey;
   final VoidCallback onHelpTap;
+  final VoidCallback onRuleLabTap;
 
   const PlayScreen({
     super.key,
@@ -17,7 +20,9 @@ class PlayScreen extends StatefulWidget {
     required this.surviveMax,
     required this.gridKey,
     required this.playBtnKey,
+    required this.ruleLabBtnKey,
     required this.onHelpTap,
+    required this.onRuleLabTap,
   });
 
   @override
@@ -33,6 +38,7 @@ class PlayScreenState extends State<PlayScreen> {
   String? gameEndTitle;
   String? gameEndMessage;
   bool isWin = false;
+  bool _showOverlay = false;
   List<String> history = [];
 
   @override
@@ -44,6 +50,17 @@ class PlayScreenState extends State<PlayScreen> {
     );
   }
 
+  void _triggerOverlay() {
+    setState(() {
+      _showOverlay = true;
+    });
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() => _showOverlay = false);
+      }
+    });
+  }
+
   void start() {
     timer?.cancel();
 
@@ -51,6 +68,7 @@ class PlayScreenState extends State<PlayScreen> {
       gameEndTitle = null;
       gameEndMessage = null;
       isWin = false;
+      _showOverlay = false;
     });
 
     int aliveInit = 0;
@@ -62,7 +80,7 @@ class PlayScreenState extends State<PlayScreen> {
     if (aliveInit == 0) {
       setState(() {
         gameEndTitle = "EMPTY GRID";
-        gameEndMessage = "Draw some living cells before starting!";
+        gameEndMessage = "Draw some Live cells before starting!";
         isWin = false;
       });
       return;
@@ -101,25 +119,31 @@ class PlayScreenState extends State<PlayScreen> {
 
     if (aliveCount == 0) {
       pause();
+      bool isNew = gameEndTitle == null;
       setState(() {
         gameEndTitle = "THE END";
-        gameEndMessage = "All cells have died. Life faded away... You Lose!";
+        gameEndMessage = "All cells are empty. The pattern faded away.";
         isWin = false;
       });
+      if (isNew) _triggerOverlay();
     } else if (isSame) {
       pause();
+      bool isNew = gameEndTitle == null;
       setState(() {
         gameEndTitle = "STABILIZED!";
-        gameEndMessage = "Life has found a stable balance. You Win!";
+        gameEndMessage = "The cells have found a stable balance.";
         isWin = true;
       });
+      if (isNew) _triggerOverlay();
     } else {
       if (isOscillating) {
+        bool isNew = gameEndTitle == null;
         setState(() {
           gameEndTitle = "ENDLESS LOOP!";
           gameEndMessage = "The cells are trapped in a repeating pattern!";
           isWin = true;
         });
+        if (isNew) _triggerOverlay();
       }
       history.add(nextStr);
       if (history.length > 25) {
@@ -140,6 +164,7 @@ class PlayScreenState extends State<PlayScreen> {
       gameEndTitle = null;
       gameEndMessage = null;
       isWin = false;
+      _showOverlay = false;
       history.clear();
 
       grid = List.generate(
@@ -200,7 +225,7 @@ class PlayScreenState extends State<PlayScreen> {
         if (grid[x][y] == 1) aliveCount++;
       }
     }
-    String status = aliveCount == 0 ? "All cells dead" : "Active";
+    String status = aliveCount == 0 ? "All cells empty" : "Active";
 
     return SafeArea(
       child: Padding(
@@ -224,6 +249,12 @@ class PlayScreenState extends State<PlayScreen> {
                       Row(
                         children: [
                           IconButton(
+                            key: widget.ruleLabBtnKey,
+                            icon: const Icon(Icons.settings, color: green),
+                            onPressed: widget.onRuleLabTap,
+                            tooltip: "Rule Lab",
+                          ),
+                          IconButton(
                             icon: const Icon(Icons.help_outline, color: green),
                             onPressed: widget.onHelpTap,
                             tooltip: "Tutorial",
@@ -241,122 +272,182 @@ class PlayScreenState extends State<PlayScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        double cellWidth = constraints.maxWidth / size;
-                        return GestureDetector(
-                          onPanUpdate: (details) {
-                            int col = (details.localPosition.dx / cellWidth).floor();
-                            int row = (details.localPosition.dy / cellWidth).floor();
-                            if (row >= 0 && row < size && col >= 0 && col < size) {
-                              if (grid[row][col] == 0) {
-                                setState(() {
-                                  grid[row][col] = 1;
-                                  gameEndTitle = null;
-                                  gameEndMessage = null;
-                                  isWin = false;
-                                  history.clear();
-                                });
-                              }
-                            }
-                          },
-                          child: GridView.builder(
-                            key: widget.gridKey,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: size * size,
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: size,
-                            ),
-                            itemBuilder: (context, index) {
-                              int row = index ~/ size;
-                              int col = index % size;
-                              bool alive = grid[row][col] == 1;
-                              return GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () {
-                                  setState(() {
-                                    grid[row][col] = 1 - grid[row][col];
-                                    gameEndTitle = null;
-                                    gameEndMessage = null;
-                                    isWin = false;
-                                    history.clear();
-                                  });
-                                },
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250),
-                                  margin: const EdgeInsets.all(1.5),
-                                  decoration: BoxDecoration(
-                                    color: alive ? green : card,
-                                    borderRadius: BorderRadius.circular(4),
-                                    boxShadow: alive
-                                        ? [
-                                            BoxShadow(
-                                              color: green.withOpacity(.5),
-                                              blurRadius: 8,
-                                            )
-                                          ]
-                                        : [],
+                        double gridSize = constraints.maxWidth < constraints.maxHeight
+                            ? constraints.maxWidth
+                            : constraints.maxHeight;
+                        double cellWidth = gridSize / size;
+                        return Center(
+                          child: SizedBox(
+                            width: gridSize,
+                            height: gridSize,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                GestureDetector(
+                                  onPanUpdate: (details) {
+                                    int col = (details.localPosition.dx / cellWidth).floor();
+                                    int row = (details.localPosition.dy / cellWidth).floor();
+                                    if (row >= 0 && row < size && col >= 0 && col < size) {
+                                      if (grid[row][col] == 0) {
+                                        setState(() {
+                                          grid[row][col] = 1;
+                                          gameEndTitle = null;
+                                          gameEndMessage = null;
+                                          isWin = false;
+                                          _showOverlay = false;
+                                          history.clear();
+                                        });
+                                      }
+                                    }
+                                  },
+                                  child: GridView.builder(
+                                    key: widget.gridKey,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: size * size,
+                                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: size,
+                                    ),
+                                    itemBuilder: (context, index) {
+                                      int row = index ~/ size;
+                                      int col = index % size;
+                                      bool alive = grid[row][col] == 1;
+                                      return GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () {
+                                          setState(() {
+                                            grid[row][col] = 1 - grid[row][col];
+                                            gameEndTitle = null;
+                                            gameEndMessage = null;
+                                            isWin = false;
+                                            _showOverlay = false;
+                                            history.clear();
+                                          });
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 250),
+                                          margin: const EdgeInsets.all(1.5),
+                                          decoration: BoxDecoration(
+                                            color: alive ? green : Colors.white.withOpacity(0.05),
+                                            border: Border.all(color: alive ? green : Colors.white.withOpacity(0.1)),
+                                            borderRadius: BorderRadius.circular(4),
+                                            boxShadow: alive
+                                                ? [
+                                                    BoxShadow(
+                                                      color: green.withOpacity(.5),
+                                                      blurRadius: 8,
+                                                    )
+                                                  ]
+                                                : [],
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
-                              );
-                            },
+                                IgnorePointer(
+                                  ignoring: true,
+                                  child: AnimatedOpacity(
+                                    opacity: _showOverlay ? 1.0 : 0.0,
+                                    duration: const Duration(milliseconds: 400),
+                                    child: AnimatedScale(
+                                      scale: _showOverlay ? 1.0 : 0.9,
+                                      duration: const Duration(milliseconds: 600),
+                                      curve: Curves.easeOutExpo,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(30),
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.02), // Extremely subtle tint
+                                              borderRadius: BorderRadius.circular(30),
+                                              border: Border.all(color: Colors.white.withOpacity(0.05), width: 1),
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  isWin ? "WIN" : "LOSE",
+                                                  style: TextStyle(color: isWin ? green : Colors.redAccent, fontSize: 40, fontWeight: FontWeight.w200, letterSpacing: 10),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (gameEndTitle != null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 16),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: isWin
-                            ? green.withOpacity(0.1)
-                            : Colors.redAccent.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isWin
-                              ? green.withOpacity(0.3)
-                              : Colors.redAccent.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            gameEndTitle!,
-                            style: TextStyle(
-                              color: isWin ? green : Colors.redAccent,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1.2,
+                  SizedBox(
+                    height: 116,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (gameEndTitle != null)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: isWin
+                                  ? green.withOpacity(0.1)
+                                  : Colors.redAccent.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isWin
+                                    ? green.withOpacity(0.3)
+                                    : Colors.redAccent.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  gameEndTitle!,
+                                  style: TextStyle(
+                                    color: isWin ? green : Colors.redAccent,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  gameEndMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 12, left: 16, right: 16),
+                            child: Text(
+                              "Draw cells on the grid and press Play!",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            gameEndMessage!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        "Press grid and click Let's Go to run simulation",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
+                        Text(
+                          "Status: $status   •   Live cells: $aliveCount",
+                          style: const TextStyle(
+                              color: green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14),
+                        ),
+                      ],
                     ),
-                  Text(
-                    "Status: $status   •   Alive: $aliveCount",
-                    style: const TextStyle(
-                        color: green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14),
                   ),
                 ],
               ),
@@ -373,22 +464,22 @@ class PlayScreenState extends State<PlayScreen> {
                     key: widget.playBtnKey,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: actionButton(
-                    "Pause",
-                    Icons.pause,
-                    pause,
-                    isPrimary: false,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: actionButton(
-                    "Clear",
-                    Icons.refresh,
-                    clear,
-                    isPrimary: false,
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 52,
+                  width: 52,
+                  child: ElevatedButton(
+                    onPressed: clear,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      backgroundColor: card,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                      ),
+                    ),
+                    child: const Icon(Icons.refresh, size: 24),
                   ),
                 ),
               ],

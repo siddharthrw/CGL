@@ -48,11 +48,11 @@ class _TutorialScreenState extends State<TutorialScreen> {
                     visual: const _MiniDemo(frames: _drawing, crossAxisCount: 5),
                     title: "The Grid & Cells",
                     description:
-                        "The universe is an infinite 2D grid. Each square is a 'cell' that can either be Alive (bright green) or Dead (dark space).\n\nTap the squares to draw your starting community.",
+                        "The universe is an infinite 2D grid. Each square is a 'cell' that can either be a Live cell (bright green) or an Empty cell (dark space).\n\nTap the squares to draw your starting community.",
                   ),
                   _buildRuleSummarySlide(),
-                  const _InteractiveDemoSlide(),
                   _buildFinalSlide(),
+                  const _InteractiveDemoSlide(),
                 ],
               ),
             ),
@@ -144,16 +144,16 @@ class _TutorialScreenState extends State<TutorialScreen> {
             ),
           ),
           const SizedBox(height: 30),
-          _ruleRow("SURVIVAL", "2 or 3 neighbors", _survival),
-          _ruleRow("BIRTH", "Exactly 3 neighbors", _reproduction),
-          _ruleRow("DEATH (Lonely)", "0 or 1 neighbors", _underpopulation),
-          _ruleRow("DEATH (Crowded)", "4+ neighbors", _overpopulation),
+          _ruleRow("SURVIVAL", "2 or 3 live neighbor cells", _survival, Icons.check_circle, green),
+          _ruleRow("BIRTH", "Exactly 3 live neighbor cells", _reproduction, Icons.check_circle, green),
+          _ruleRow("DEATH (Lonely)", "0 or 1 live neighbor cells", _underpopulation, Icons.cancel, Colors.redAccent),
+          _ruleRow("DEATH (Crowded)", "> 3 live neighbor cells", _overpopulation, Icons.cancel, Colors.redAccent),
         ],
       ),
     );
   }
 
-  Widget _ruleRow(String title, String condition, List<List<int>> frames) {
+  Widget _ruleRow(String title, String condition, List<List<int>> frames, IconData icon, Color iconColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -170,14 +170,22 @@ class _TutorialScreenState extends State<TutorialScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: green,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.1,
-                  ),
+                Row(
+                  children: [
+                    Icon(icon, color: iconColor, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          color: iconColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -217,17 +225,6 @@ class _TutorialScreenState extends State<TutorialScreen> {
             "We highly recommend reading the full 'Learn' guide to master the rules before playing!",
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 16, height: 1.5),
-          ),
-          const SizedBox(height: 50),
-          ElevatedButton(
-            onPressed: () => _finishTutorial(0), // Tab 0 = Play Game
-            style: ElevatedButton.styleFrom(
-              backgroundColor: green,
-              foregroundColor: bg,
-              minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text("PLAY GAME", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
           ),
         ],
       ),
@@ -300,7 +297,8 @@ class _MiniDemoState extends State<_MiniDemo> {
             duration: const Duration(milliseconds: 250),
             margin: const EdgeInsets.all(2.0),
             decoration: BoxDecoration(
-              color: alive ? green : card,
+              color: alive ? green : Colors.white.withOpacity(0.05),
+              border: Border.all(color: alive ? green : Colors.white.withOpacity(0.1)),
               borderRadius: BorderRadius.circular(4),
               boxShadow: alive ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)] : [],
             ),
@@ -348,15 +346,18 @@ class _InteractiveDemoSlide extends StatefulWidget {
 
 enum _DemoStep { pressPlay, watch, win }
 
-class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
+class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> with SingleTickerProviderStateMixin {
   final int size = 10;
   late List<List<int>> grid;
   Timer? timer;
   _DemoStep _step = _DemoStep.pressPlay;
+  late AnimationController _handController;
+  bool _hasTapped = false;
 
   @override
   void initState() {
     super.initState();
+    _handController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))..repeat(reverse: true);
     _reset();
   }
 
@@ -438,6 +439,7 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
   @override
   void dispose() {
     timer?.cancel();
+    _handController.dispose();
     super.dispose();
   }
 
@@ -448,7 +450,7 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
       case _DemoStep.watch:
         return "Simulation is running... Observe how the cells evolve.";
       case _DemoStep.win:
-        return "Simulation ended! It either stabilized or all cells died. Press 'Next' below to continue.";
+        return "Simulation ended! It either stabilized or all cells became empty. Press 'Play Game' below to start.";
     }
   }
 
@@ -484,38 +486,60 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
           SizedBox(
             width: 250,
             height: 250,
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: size,
-              ),
-              itemCount: size * size,
-              itemBuilder: (context, index) {
-                int row = index ~/ size;
-                int col = index % size;
-                bool alive = grid[row][col] == 1;
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    if (_step == _DemoStep.watch) return;
-                    setState(() {
-                      grid[row][col] = 1 - grid[row][col];
-                      _step = _DemoStep.pressPlay;
-                    });
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: size,
+                  ),
+                  itemCount: size * size,
+                  itemBuilder: (context, index) {
+                    int row = index ~/ size;
+                    int col = index % size;
+                    bool alive = grid[row][col] == 1;
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        if (!_hasTapped) {
+                          setState(() {
+                            _hasTapped = true;
+                          });
+                        }
+                        if (_step == _DemoStep.watch) return;
+                        setState(() {
+                          grid[row][col] = 1 - grid[row][col];
+                          _step = _DemoStep.pressPlay;
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.all(1.5),
+                        decoration: BoxDecoration(
+                          color: alive ? green : Colors.white.withOpacity(0.05),
+                          border: Border.all(color: alive ? green : Colors.white.withOpacity(0.1)),
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: alive
+                              ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)]
+                              : [],
+                        ),
+                      ),
+                    );
                   },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    margin: const EdgeInsets.all(1.5),
-                    decoration: BoxDecoration(
-                      color: alive ? green : card,
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: alive
-                          ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)]
-                          : [],
+                ),
+                if (!_hasTapped)
+                  Positioned(
+                    child: IgnorePointer(
+                      child: SlideTransition(
+                        position: Tween<Offset>(begin: const Offset(0, -0.3), end: const Offset(0, 0.3)).animate(
+                          CurvedAnimation(parent: _handController, curve: Curves.easeInOut),
+                        ),
+                        child: Icon(Icons.touch_app, size: 60, color: Colors.white.withOpacity(0.8)),
+                      ),
                     ),
                   ),
-                );
-              },
+              ],
             ),
           ),
           const SizedBox(height: 30),
@@ -532,16 +556,24 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> {
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                     ),
                   )
-                : OutlinedButton.icon(
-                    onPressed: _reset,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text("Reset Demo"),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: green,
-                      side: const BorderSide(color: green),
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    ),
-                  ),
+                : _step == _DemoStep.win
+                    ? ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => const HomeScreen(initialTab: 0)),
+                            (route) => false,
+                          );
+                        },
+                        icon: const Icon(Icons.rocket_launch),
+                        label: const Text("Play Game"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: green,
+                          foregroundColor: bg,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
           ),
         ],
       ),

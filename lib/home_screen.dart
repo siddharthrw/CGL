@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme.dart';
 import 'play_screen.dart';
-import 'rules_screen.dart';
 import 'learn_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<PlayScreenState> playScreenKey = GlobalKey<PlayScreenState>();
   final GlobalKey gridKey = GlobalKey();
   final GlobalKey playBtnKey = GlobalKey();
-  final GlobalKey rulesTabKey = GlobalKey();
+  final GlobalKey ruleLabBtnKey = GlobalKey();
   final GlobalKey learnTabKey = GlobalKey();
   late TutorialCoachMark tutorialCoachMark;
 
@@ -36,6 +35,26 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     currentTab = widget.initialTab;
+  }
+
+  void _showRuleLab() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _RuleLabSheet(
+          initialBirth: birthRule,
+          initialSMin: surviveMin,
+          initialSMax: surviveMax,
+          onSaveAndPlay: (b, sMin, sMax) {
+            setState(() { birthRule = b; surviveMin = sMin; surviveMax = sMax; });
+            Navigator.pop(context);
+            playScreenKey.currentState?.start(); // Automatically presses play for them!
+          },
+        );
+      }
+    );
   }
 
   void showTutorial() {
@@ -153,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context, controller) {
               return _buildTutorialContent(
                 "1. The Grid",
-                "Tap these squares to bring cells to life (green). Empty squares are dead space.",
+                "Tap these squares to create Live cells (green). Unlit squares are Empty cells.",
               );
             },
           ),
@@ -178,17 +197,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       TargetFocus(
-        identify: "rulesTabKey",
-        keyTarget: rulesTabKey,
+        identify: "ruleLabBtnKey",
+        keyTarget: ruleLabBtnKey,
         alignSkip: Alignment.topRight,
         shape: ShapeLightFocus.Circle, // Highlights the tab with a perfect circle
         contents: [
           TargetContent(
-            align: ContentAlign.top,
+            align: ContentAlign.bottom,
             builder: (context, controller) {
               return _buildTutorialContent(
                 "3. Change the Laws",
-                "Go here to tweak the rules of life (how many neighbors are needed for birth and survival).",
+                "Go to the Rule Lab to tweak the rules of life (easy, medium, hard, or custom!).",
               );
             },
           ),
@@ -224,15 +243,9 @@ class _HomeScreenState extends State<HomeScreen> {
         surviveMax: surviveMax,
         gridKey: gridKey,
         playBtnKey: playBtnKey,
+        ruleLabBtnKey: ruleLabBtnKey,
         onHelpTap: showTutorial,
-      ),
-      RulesScreen(
-        birthRule: birthRule,
-        surviveMin: surviveMin,
-        surviveMax: surviveMax,
-        onBirthChanged: (v) => setState(() => birthRule = v),
-        onSurviveMinChanged: (v) => setState(() => surviveMin = v),
-        onSurviveMaxChanged: (v) => setState(() => surviveMax = v),
+        onRuleLabTap: _showRuleLab,
       ),
       const LearnScreen(),
     ];
@@ -262,11 +275,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 border: Border.all(color: Colors.white.withOpacity(0.05)),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   navItem(0, Icons.grid_view, "Play"),
-                  navItem(1, Icons.tune, "Rules", key: rulesTabKey),
-                  navItem(2, Icons.school, "Learn", key: learnTabKey),
+                  navItem(1, Icons.school, "Learn", key: learnTabKey),
                 ],
               ),
             ),
@@ -289,8 +301,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(
-          horizontal: 18,
           vertical: 10,
+          horizontal: 50,
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -312,6 +324,169 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 11,
                 color: active ? green : Colors.grey,
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum RuleMode { easy, medium, hard, custom }
+
+class _RuleLabSheet extends StatefulWidget {
+  final int initialBirth;
+  final int initialSMin;
+  final int initialSMax;
+  final Function(int, int, int) onSaveAndPlay;
+
+  const _RuleLabSheet({
+    required this.initialBirth,
+    required this.initialSMin,
+    required this.initialSMax,
+    required this.onSaveAndPlay,
+  });
+
+  @override
+  State<_RuleLabSheet> createState() => _RuleLabSheetState();
+}
+
+class _RuleLabSheetState extends State<_RuleLabSheet> {
+  late RuleMode _mode;
+  late int _b;
+  late int _sMin;
+  late int _sMax;
+
+  @override
+  void initState() {
+    super.initState();
+    _b = widget.initialBirth;
+    _sMin = widget.initialSMin;
+    _sMax = widget.initialSMax;
+    _determineMode();
+  }
+
+  void _determineMode() {
+    if (_b == 3 && _sMin == 2 && _sMax == 3) {
+      _mode = RuleMode.easy;
+    } else if (_b == 3 && _sMin == 3 && _sMax == 3) {
+      _mode = RuleMode.medium;
+    } else if (_b == 4 && _sMin == 4 && _sMax == 4) {
+      _mode = RuleMode.hard;
+    } else {
+      _mode = RuleMode.custom;
+    }
+  }
+
+  void _setMode(RuleMode m) {
+    setState(() {
+      _mode = m;
+      if (m == RuleMode.easy) {
+        _b = 3; _sMin = 2; _sMax = 3;
+      } else if (m == RuleMode.medium) {
+        _b = 3; _sMin = 3; _sMax = 3;
+      } else if (m == RuleMode.hard) {
+        _b = 4; _sMin = 4; _sMax = 4;
+      }
+    });
+  }
+
+  Widget _buildModeCard(RuleMode m, String title, String subtitle) {
+    bool active = _mode == m;
+    return GestureDetector(
+      onTap: () => _setMode(m),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: active ? green.withOpacity(0.15) : card,
+          border: Border.all(color: active ? green : Colors.white12),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              active ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: active ? green : Colors.grey,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(color: active ? green : Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4)),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        top: 24, left: 24, right: 24,
+        bottom: MediaQuery.of(context).padding.bottom + 24,
+      ),
+      decoration: const BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("RULE LAB", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            _buildModeCard(RuleMode.easy, "Easy (Standard)", "Birth: 3 cells | Survive: 2-3 cells\nPerfect balance. You can easily reach a stable state."),
+            _buildModeCard(RuleMode.medium, "Medium", "Birth: 3 cells | Survive: 3 cells\nCells become empty easily. You will lose about 60% of the time."),
+            _buildModeCard(RuleMode.hard, "Hard", "Birth: 4 cells | Survive: 4 cells\nHarsh environment. You will lose almost every time."),
+            _buildModeCard(RuleMode.custom, "Custom", "Set your own laws of physics."),
+            
+            if (_mode == RuleMode.custom) ...[
+              const SizedBox(height: 16),
+              const Text("Neighbors required for BIRTH", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              const Text("These many live neighbor cells are required for an Empty cell to become a Live cell.", style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.3)),
+              Slider(
+                value: _b.toDouble(),
+                min: 0, max: 8, divisions: 8,
+                label: _b.toString(),
+                onChanged: (v) => setState(() => _b = v.toInt()),
+              ),
+              const SizedBox(height: 8),
+              const Text("Neighbors required for SURVIVAL", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              const Text("These many live neighbor cells are required for a Live cell to stay a Live cell.", style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.3)),
+              RangeSlider(
+                values: RangeValues(_sMin.toDouble(), _sMax.toDouble()),
+                min: 0, max: 8, divisions: 8,
+                labels: RangeLabels(_sMin.toString(), _sMax.toString()),
+                onChanged: (v) => setState(() {
+                  _sMin = v.start.toInt();
+                  _sMax = v.end.toInt();
+                }),
+              ),
+            ],
+            
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: green,
+                  foregroundColor: bg,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                onPressed: () => widget.onSaveAndPlay(_b, _sMin, _sMax),
+                child: const Text("SAVE AND PLAY", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
               ),
             )
           ],

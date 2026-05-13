@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'theme.dart';
 
@@ -12,68 +13,52 @@ class LearnScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
-            "HOW IT WORKS",
+            "ABOUT THE GAME",
             style: TextStyle(
               color: Colors.white,
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
-              letterSpacing: 2,
+              letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            "The fascinating rules of Conway's Game of Life.",
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+            ),
+            child: const Row(
+              children: [
+                _MiniDemo(frames: _glider, crossAxisCount: 5, size: 80),
+                SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    "Draw an initial pattern and watch it evolve!\n\nWin by finding a stable pattern or endless loop. Lose if all cells become empty.",
+                    style: TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 30),
-          learnSection(
-            "The Grid & Cells",
-            "The game takes place on a grid of squares called 'cells'. A cell can be either 'alive' (green) or 'dead' (dark empty space). Every cell has 8 neighbors surrounding it: up, down, left, right, and diagonals.",
-            Icons.grid_on,
+          const Divider(color: Colors.white10),
+          const SizedBox(height: 20),
+          const Text(
+            "THE RULES",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
           ),
-          learnSection(
-            "1. Underpopulation (Death)",
-            "Cells need a community to thrive! If a living cell has 0 or 1 living neighbors, it dies of loneliness in the next generation. It simply doesn't have enough support to survive the harsh environment.",
-            Icons.person_off,
-          ),
-          learnSection(
-            "2. Survival (The Sweet Spot)",
-            "Balance is the key to life. If a living cell has exactly 2 or 3 living neighbors, it is perfectly content. It survives and remains alive in the next generation, completely unchanged.",
-            Icons.favorite,
-          ),
-          learnSection(
-            "3. Overpopulation (Death)",
-            "Too much of a good thing is harmful. If a living cell is surrounded by 4 or more living neighbors, it dies from overpopulation. The environment becomes too crowded, and resources run out.",
-            Icons.groups,
-          ),
-          learnSection(
-            "4. Reproduction (Birth)",
-            "Life finds a way! If an empty, dead space has EXACTLY 3 living neighbors surrounding it, those neighbors create a brand new cell in that empty space in the next generation. This is how the population grows and moves.",
-            Icons.child_care,
-          ),
-          learnSection(
-            "The End (You Lose)",
-            "If every single cell dies and the grid becomes completely empty, life has faded away and you lose. Try drawing a larger or closer community of cells to start!",
-            Icons.close_rounded,
-          ),
-          learnSection(
-            "Stabilized (You Win!)",
-            "If your cells reach a perfect, unchanging balance where they survive endlessly without anyone dying or being born, you win the game!",
-            Icons.emoji_events,
-          ),
-          learnSection(
-            "Endless Loops",
-            "Sometimes the cells get trapped in a repeating pattern, oscillating back and forth forever (like a blinker). If you find one, sit back and enjoy the endless dance!",
-            Icons.loop,
-          ),
-          learnSection(
-            "Emergent Beauty",
-            "From these 4 simple rules, incredible and complex patterns emerge. Go to the 'Play' tab, draw a shape, and see what happens when you press 'Let's Go!'",
-            Icons.auto_awesome,
-          ),
+          const SizedBox(height: 16),
+          _animatedRuleRow("SURVIVAL", "2 or 3 live neighbor cells", "The cell has perfect balance and stays a Live cell.", _survival, Icons.check_circle, green),
+          _animatedRuleRow("BIRTH", "Exactly 3 live neighbor cells", "A Live cell is born in an Empty cell space.", _reproduction, Icons.check_circle, green),
+          _animatedRuleRow("DEATH (Lonely)", "0 or 1 live neighbor cells", "The cell becomes an Empty cell from isolation.", _underpopulation, Icons.cancel, Colors.redAccent),
+          _animatedRuleRow("DEATH (Crowded)", "> 3 live neighbor cells", "The cell becomes an Empty cell from overpopulation.", _overpopulation, Icons.cancel, Colors.redAccent),
           const SizedBox(height: 10),
           const Divider(color: Colors.white10),
           const SizedBox(height: 20),
@@ -90,7 +75,7 @@ class LearnScreen extends StatelessWidget {
           faqItem("Is this a game you play?", "It's known as a 'zero-player game'. You set up the initial configuration and watch how it evolves based on the rules without further input!"),
           faqItem("Why is it called the 'Game of Life'?", "Created by mathematician John Conway in 1970, it perfectly simulates the life, death, and reproduction of biological cells using simple math."),
           faqItem("What are Gliders?", "Gliders are special patterns of cells that move across the grid infinitely. They 'fly' diagonally across the board. Try drawing a small asymmetrical shape and see if it moves!"),
-          faqItem("Can I change the rules?", "Absolutely! Go to the 'Rules' tab to experiment. Changing the required neighbors for birth or survival creates entirely new and bizarre universes."),
+          faqItem("Can I change the rules?", "Absolutely! Tap the 'Rule Lab' icon (the settings gear) at the top of the Play screen to experiment. Changing the required neighbors for birth or survival creates entirely new and bizarre universes."),
           const SizedBox(height: 40),
           const Center(
             child: Text(
@@ -109,33 +94,56 @@ class LearnScreen extends StatelessWidget {
     );
   }
 
-  Widget learnSection(String title, String body, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 32),
+  Widget _animatedRuleRow(String title, String condition, String desc, List<List<int>> frames, IconData icon, Color iconColor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: green, size: 32),
+          _MiniDemo(frames: frames, crossAxisCount: 5, size: 70),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Icon(icon, color: iconColor, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          color: iconColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
                 Text(
-                  title,
+                  condition,
                   style: const TextStyle(
-                    color: green,
-                    fontSize: 20,
+                    color: Colors.white,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
-                  body,
+                  desc,
                   style: const TextStyle(
-                    color: Colors.white70,
-                    height: 1.6,
-                    fontSize: 16,
+                    color: Colors.grey,
+                    fontSize: 13,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -182,3 +190,93 @@ class LearnScreen extends StatelessWidget {
     );
   }
 }
+
+class _MiniDemo extends StatefulWidget {
+  final List<List<int>> frames;
+  final int crossAxisCount;
+  final double size;
+
+  const _MiniDemo({required this.frames, this.crossAxisCount = 5, this.size = 140});
+
+  @override
+  State<_MiniDemo> createState() => _MiniDemoState();
+}
+
+class _MiniDemoState extends State<_MiniDemo> {
+  int _currentIndex = 0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 600), (timer) {
+      if (mounted && widget.frames.length > 1) {
+        setState(() {
+          _currentIndex = (_currentIndex + 1) % widget.frames.length;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final frame = widget.frames[_currentIndex];
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: widget.crossAxisCount,
+        ),
+        itemCount: frame.length,
+        itemBuilder: (context, index) {
+          bool alive = frame[index] == 1;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            margin: const EdgeInsets.all(2.0),
+            decoration: BoxDecoration(
+              color: alive ? green : Colors.white.withOpacity(0.05),
+              border: Border.all(color: alive ? green : Colors.white.withOpacity(0.1)),
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: alive ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)] : [],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+const _underpopulation = [
+  [0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,0, 0,0,0,0,0, 0,0,0,0,0], // 2 cells
+  [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0], // Both die
+];
+
+const _survival = [
+  [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0], // 2x2 block
+  [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0], // Stays the same
+];
+
+const _overpopulation = [
+  [0,0,0,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,1,0,0, 0,0,0,0,0], // Plus shape
+  [0,0,0,0,0, 0,1,1,1,0, 0,1,0,1,0, 0,1,1,1,0, 0,0,0,0,0], // Center dies
+];
+
+const _reproduction = [
+  [0,0,0,0,0, 0,1,1,0,0, 0,1,0,0,0, 0,0,0,0,0, 0,0,0,0,0], // L shape
+  [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0], // 4th cell spawns
+];
+
+const _glider = [
+  [0,0,1,0,0, 1,0,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,1,0,0,0, 0,1,1,0,0, 1,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
+  [0,0,0,0,0, 0,1,0,1,0, 0,0,1,1,0, 0,0,1,0,0, 0,0,0,0,0],
+];
