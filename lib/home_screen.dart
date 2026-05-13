@@ -30,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey learnTabKey = GlobalKey();
   late TutorialCoachMark tutorialCoachMark;
 
+  DateTime _lastTutorialTap = DateTime.fromMillisecondsSinceEpoch(0);
+
   @override
   void initState() {
     super.initState();
@@ -45,51 +47,94 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _advanceTutorial() {
+    final now = DateTime.now();
+    // 800ms cooldown physically prevents double-jumping while the 600ms animation plays
+    if (now.difference(_lastTutorialTap).inMilliseconds < 800) return;
+    _lastTutorialTap = now;
+    tutorialCoachMark.next();
+  }
+
   void _initTutorial() {
     tutorialCoachMark = TutorialCoachMark(
       targets: _createTargets(),
       colorShadow: Colors.black, // Pure black for better contrast
-      textSkip: "SKIP",
       paddingFocus: 15,
       opacityShadow: 0.96, // Much darker to hide background text entirely
       focusAnimationDuration: const Duration(milliseconds: 600), // Smooth slide
       unFocusAnimationDuration: const Duration(milliseconds: 600),
       pulseAnimationDuration: const Duration(milliseconds: 1000), // Softer pulse
+      hideSkip: true, 
+      onClickOverlay: (target) {
+        _advanceTutorial();
+      },
+      onClickTarget: (target) {
+        // The package automatically advances 1 step when the target is tapped.
+        // Update the timestamp so overlay taps don't double-jump right after.
+        _lastTutorialTap = DateTime.now();
+      },
     )..show(context: context);
   }
 
   // A custom widget to make the tutorial text look like a stylized tooltip card
   Widget _buildTutorialContent(String title, String body) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: card, // Solid background so text doesn't merge with the app
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: green.withOpacity(0.5), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.8),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          )
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-                color: green, fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            body,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 15, height: 1.5),
-          ),
-        ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _advanceTutorial,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: card, // Solid background so text doesn't merge with the app
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: green.withOpacity(0.5), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.8),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            )
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                        color: green, fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    _lastTutorialTap = DateTime.now();
+                    tutorialCoachMark.skip();
+                  },
+                  child: const Text(
+                    "SKIP",
+                    style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.2),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              body,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 15, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Tap here to continue",
+              style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
+            )
+          ],
+        ),
       ),
     );
   }

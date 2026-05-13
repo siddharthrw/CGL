@@ -184,21 +184,10 @@ class _TutorialScreenState extends State<TutorialScreen> {
           ),
           const SizedBox(height: 50),
           ElevatedButton(
-            onPressed: () => _finishTutorial(2), // Tab 2 = Learn
+            onPressed: () => _finishTutorial(0), // Tab 0 = Play Game
             style: ElevatedButton.styleFrom(
               backgroundColor: green,
               foregroundColor: bg,
-              minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text("LEARN MORE", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton(
-            onPressed: () => _finishTutorial(0), // Tab 0 = Play Game
-            style: OutlinedButton.styleFrom(
-              foregroundColor: green,
-              side: const BorderSide(color: green, width: 2),
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
