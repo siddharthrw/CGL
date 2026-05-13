@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int surviveMin = 2;
   int surviveMax = 3;
 
+  final GlobalKey<PlayScreenState> playScreenKey = GlobalKey<PlayScreenState>();
   final GlobalKey gridKey = GlobalKey();
   final GlobalKey playBtnKey = GlobalKey();
   final GlobalKey rulesTabKey = GlobalKey();
@@ -172,6 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final pages = [
       PlayScreen(
+        key: playScreenKey,
         birthRule: birthRule,
         surviveMin: surviveMin,
         surviveMax: surviveMax,

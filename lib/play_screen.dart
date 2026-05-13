@@ -21,10 +21,10 @@ class PlayScreen extends StatefulWidget {
   });
 
   @override
-  State<PlayScreen> createState() => _PlayScreenState();
+  State<PlayScreen> createState() => PlayScreenState();
 }
 
-class _PlayScreenState extends State<PlayScreen> {
+class PlayScreenState extends State<PlayScreen> {
   final size = 20;
   late List<List<int>> grid;
   Timer? timer;
@@ -399,7 +399,7 @@ class _PlayScreenState extends State<PlayScreen> {
     );
   }
 
-  Widget actionButton(String text, IconData icon, VoidCallback onTap,
+  Widget actionButton(String text, IconData icon, VoidCallback? onTap,
       {bool isPrimary = false, Key? key}) {
     return SizedBox(
       key: key,

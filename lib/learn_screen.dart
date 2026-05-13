@@ -35,23 +35,23 @@ class LearnScreen extends StatelessWidget {
             Icons.grid_on,
           ),
           learnSection(
-            "1. Underpopulation",
-            "If a living cell has fewer than 2 living neighbors, it dies of loneliness. It needs a community to survive!",
+            "1. Underpopulation (Death)",
+            "Cells need a community to thrive! If a living cell has 0 or 1 living neighbors, it dies of loneliness in the next generation. It simply doesn't have enough support to survive the harsh environment.",
             Icons.person_off,
           ),
           learnSection(
-            "2. Survival",
-            "If a living cell has exactly 2 or 3 living neighbors, it is happy and survives into the next generation. The balance is just right.",
+            "2. Survival (The Sweet Spot)",
+            "Balance is the key to life. If a living cell has exactly 2 or 3 living neighbors, it is perfectly content. It survives and remains alive in the next generation, completely unchanged.",
             Icons.favorite,
           ),
           learnSection(
-            "3. Overpopulation",
-            "If a living cell has more than 3 living neighbors, it dies because it's too crowded and there aren't enough resources.",
+            "3. Overpopulation (Death)",
+            "Too much of a good thing is harmful. If a living cell is surrounded by 4 or more living neighbors, it dies from overpopulation. The environment becomes too crowded, and resources run out.",
             Icons.groups,
           ),
           learnSection(
-            "4. Reproduction",
-            "If a dead (empty) cell has exactly 3 living neighbors, a brand new cell is born in that space! Life finds a way.",
+            "4. Reproduction (Birth)",
+            "Life finds a way! If an empty, dead space has EXACTLY 3 living neighbors surrounding it, those neighbors create a brand new cell in that empty space in the next generation. This is how the population grows and moves.",
             Icons.child_care,
           ),
           learnSection(

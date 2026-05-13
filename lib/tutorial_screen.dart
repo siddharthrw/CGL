@@ -57,10 +57,24 @@ class _TutorialScreenState extends State<TutorialScreen> {
                         "The universe is an infinite 2D grid. Each square is a 'cell' that can either be Alive (bright green) or Dead (dark space).\n\nBefore running the simulation, simply tap the squares to draw your starting community.",
                   ),
                   _buildSlide(
-                    visual: const _MiniDemo(frames: _blinker, crossAxisCount: 5),
-                    title: "The Rules of Life",
-                    description:
-                        "Every generation, cells check their 8 surrounding neighbors to see what happens next:\n\n• Survival: 2 or 3 neighbors (Perfect)\n• Death: < 2 (Lonely) or > 3 (Crowded)\n• Birth: Exactly 3 neighbors creates a new cell!",
+                    visual: const _MiniDemo(frames: _underpopulation, crossAxisCount: 5),
+                    title: "Rule 1: Death 🥀",
+                    description: "Cells need a community! If a living cell has 0 or 1 neighbors, it dies of loneliness in the next generation.",
+                  ),
+                  _buildSlide(
+                    visual: const _MiniDemo(frames: _survival, crossAxisCount: 5),
+                    title: "Rule 2: Survival 🛡️",
+                    description: "Perfect balance. If a living cell has exactly 2 or 3 neighbors, it survives happily into the next generation.",
+                  ),
+                  _buildSlide(
+                    visual: const _MiniDemo(frames: _overpopulation, crossAxisCount: 5),
+                    title: "Rule 3: Overpopulation 👥",
+                    description: "Too crowded! If a cell has 4 or more neighbors, it dies from a lack of resources.",
+                  ),
+                  _buildSlide(
+                    visual: const _MiniDemo(frames: _reproduction, crossAxisCount: 5),
+                    title: "Rule 4: Birth ✨",
+                    description: "Life finds a way! If an empty space is surrounded by EXACTLY 3 neighbors, a brand new cell is born.",
                   ),
                   _buildSlide(
                     visual: const _MiniDemo(frames: _glider, crossAxisCount: 5),
@@ -74,21 +88,21 @@ class _TutorialScreenState extends State<TutorialScreen> {
               ),
             ),
             // Bottom Navigation Indicators
-            if (_currentPage != 5)
+            if (_currentPage != 8)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () => _controller.jumpToPage(5), // Jump to last slide
+                      onPressed: () => _controller.jumpToPage(8), // Jump to last slide
                       child: const Text(
                         "SKIP",
                         style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                     ),
                     Row(
-                      children: List.generate(6, (index) => _buildDot(index)),
+                      children: List.generate(9, (index) => _buildDot(index)),
                     ),
                     TextButton(
                       onPressed: () {
@@ -284,9 +298,24 @@ const _drawing = [
   [0,0,0,0,0, 0,0,1,0,0, 0,0,0,1,0, 0,1,1,1,0, 0,0,0,0,0],
 ];
 
-const _blinker = [
-  [0,0,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0],
-  [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
+const _underpopulation = [
+  [0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,0, 0,0,0,0,0, 0,0,0,0,0], // 2 cells
+  [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0], // Both die
+];
+
+const _survival = [
+  [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0], // 2x2 block
+  [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0], // Stays the same
+];
+
+const _overpopulation = [
+  [0,0,0,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,1,0,0, 0,0,0,0,0], // Plus shape
+  [0,0,0,0,0, 0,1,1,1,0, 0,1,0,1,0, 0,1,1,1,0, 0,0,0,0,0], // Center dies
+];
+
+const _reproduction = [
+  [0,0,0,0,0, 0,1,1,0,0, 0,1,0,0,0, 0,0,0,0,0, 0,0,0,0,0], // L shape
+  [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0], // 4th cell spawns
 ];
 
 const _glider = [

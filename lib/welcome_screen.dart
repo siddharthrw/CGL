@@ -221,7 +221,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 context,
                                 PageRouteBuilder(
                                   transitionDuration: const Duration(milliseconds: 800),
-                                  pageBuilder: (_, __, ___) => const TutorialScreen(),
+                                    pageBuilder: (_, __, ___) => const TutorialScreen(),
                                   transitionsBuilder: (_, animation, __, child) {
                                     return FadeTransition(
                                       opacity: animation,
