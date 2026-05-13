@@ -7,10 +7,9 @@ void main() {
     testWidgets('UI elements render correctly', (WidgetTester tester) async {
       await tester.pumpWidget(const MaterialApp(home: WelcomeScreen()));
       
-      expect(find.text("WELCOME TO"), findsOneWidget);
       expect(find.text("CONWAY'S\nGAME OF LIFE"), findsOneWidget);
-      expect(find.text("ENTER THE GRID"), findsOneWidget);
-      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+      expect(find.text("ENTER GRID"), findsOneWidget);
+      expect(find.text("START TUTORIAL"), findsOneWidget);
     });
   });
 }

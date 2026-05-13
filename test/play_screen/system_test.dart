@@ -33,15 +33,15 @@ void main() {
       setLargeDisplay(tester);
       await tester.pumpWidget(const LifeLab());
       await tester.pump();
-      await tester.tap(find.text('ENTER THE GRID'));
+      await tester.tap(find.text('ENTER GRID'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 850));
+      await tester.pump(const Duration(milliseconds: 1850));
     }
 
     testWidgets('EMPTY GRID detection', (WidgetTester tester) async {
       await navigateToPlayScreen(tester);
 
-      await tester.tap(find.text("Let's Go!"));
+      await tester.tap(find.widgetWithText(ElevatedButton, "Play"));
       await tester.pump();
 
       expect(find.text('EMPTY GRID'), findsOneWidget);
@@ -53,7 +53,7 @@ void main() {
       // Tap one center cell (10, 10)
       await tapCell(tester, 10, 10);
 
-      await tester.tap(find.text("Let's Go!"));
+      await tester.tap(find.widgetWithText(ElevatedButton, "Play"));
       
       // Generation ticks at 250ms
       await tester.pump(const Duration(milliseconds: 300));
@@ -70,7 +70,7 @@ void main() {
       await tapCell(tester, 11, 10);
       await tapCell(tester, 11, 11);
 
-      await tester.tap(find.text("Let's Go!"));
+      await tester.tap(find.widgetWithText(ElevatedButton, "Play"));
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('STABILIZED!'), findsOneWidget);
@@ -84,7 +84,7 @@ void main() {
       await tapCell(tester, 10, 10);
       await tapCell(tester, 10, 11);
 
-      await tester.tap(find.text("Let's Go!"));
+      await tester.tap(find.widgetWithText(ElevatedButton, "Play"));
       
       await tester.pump(const Duration(milliseconds: 250));
       await tester.pump(const Duration(milliseconds: 250));

@@ -43,5 +43,36 @@ void main() {
 
       expect(find.text("LIFE LAB"), findsOneWidget);
     });
+
+    testWidgets('Tapping help icon shows TutorialCoachMark', (WidgetTester tester) async {
+      setLargeDisplay(tester);
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      
+      // Tap the help icon
+      await tester.tap(find.byIcon(Icons.help_outline));
+      await tester.pump(const Duration(milliseconds: 1000));
+      
+      // Check if tutorial is shown
+      expect(find.text("1. The Grid"), findsOneWidget);
+      expect(find.text("SKIP"), findsOneWidget);
+    });
+
+    testWidgets('TutorialCoachMark skips correctly', (WidgetTester tester) async {
+      setLargeDisplay(tester);
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      
+      // Open tutorial
+      await tester.tap(find.byIcon(Icons.help_outline));
+      await tester.pump(const Duration(milliseconds: 1000));
+      
+      expect(find.text("SKIP"), findsOneWidget);
+
+      // Tap SKIP
+      await tester.tap(find.text("SKIP"));
+      await tester.pump(const Duration(milliseconds: 1000));
+
+      // Tutorial is gone
+      expect(find.text("1. The Grid"), findsNothing);
+    });
   });
 }

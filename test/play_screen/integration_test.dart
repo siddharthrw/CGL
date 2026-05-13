@@ -67,15 +67,16 @@ void main() {
     testWidgets('Play, Pause, and Clear buttons exist and behave correctly', (WidgetTester tester) async {
       await setupPlayScreen(tester);
 
-      expect(find.text("Let's Go!"), findsOneWidget);
+      expect(find.text("Play"), findsWidgets); // Finds in nav bar and in action buttons
       expect(find.text("Pause"), findsOneWidget);
       expect(find.text("Clear"), findsOneWidget);
+      expect(find.byIcon(Icons.help_outline), findsOneWidget);
 
       // Tap cell to allow start
       await tapCell(tester, 0, 0);
 
       // Start
-      await tester.tap(find.text("Let's Go!"));
+      await tester.tap(find.widgetWithText(ElevatedButton, "Play"));
       await tester.pump();
 
       // Pause

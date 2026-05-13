@@ -35,9 +35,9 @@ void main() {
       setLargeDisplay(tester);
       await tester.pumpWidget(const LifeLab());
       await tester.pump();
-      await tester.tap(find.text('ENTER THE GRID'));
+      await tester.tap(find.text('ENTER GRID'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 850));
+      await tester.pump(const Duration(milliseconds: 1850));
     }
 
     testWidgets('Pause button explicitly stops simulation timer', (WidgetTester tester) async {
@@ -48,7 +48,7 @@ void main() {
       await tapCell(tester, 11, 10);
       await tapCell(tester, 11, 11);
 
-      await tester.tap(find.text("Let's Go!"));
+      await tester.tap(find.widgetWithText(ElevatedButton, "Play"));
       // Let the simulation run for one generation to prove it started successfully
       await tester.pump(const Duration(milliseconds: 300)); 
       expect(find.text("GEN 1"), findsOneWidget);
@@ -67,7 +67,7 @@ void main() {
 
       await tapCell(tester, 10, 10);
 
-      await tester.tap(find.text("Let's Go!"));
+      await tester.tap(find.widgetWithText(ElevatedButton, "Play"));
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text("GEN 1"), findsOneWidget);
@@ -84,7 +84,7 @@ void main() {
     testWidgets('Dialogs are cleared when interacting with grid', (WidgetTester tester) async {
       await initPlay(tester);
 
-      await tester.tap(find.text("Let's Go!"));
+      await tester.tap(find.widgetWithText(ElevatedButton, "Play"));
       await tester.pump();
       expect(find.text("EMPTY GRID"), findsOneWidget);
 

@@ -37,5 +37,43 @@ void main() {
       // Since max is 8, tapping the far right should send 8
       expect(tappedBirth, equals(8));
     });
+    testWidgets('Reset button triggers callbacks with default standard rules', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1440, 2560);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      int tappedBirth = -1;
+      int tappedSurviveMin = -1;
+      int tappedSurviveMax = -1;
+      
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RulesScreen(
+              birthRule: 8,
+              surviveMin: 1,
+              surviveMax: 8,
+              onBirthChanged: (v) => tappedBirth = v,
+              onSurviveMinChanged: (v) => tappedSurviveMin = v,
+              onSurviveMaxChanged: (v) => tappedSurviveMax = v,
+            ),
+          ),
+        ),
+      );
+
+      final resetBtn = find.text("Reset to Standard Rules");
+      expect(resetBtn, findsOneWidget);
+
+      await tester.ensureVisible(resetBtn);
+      await tester.tap(resetBtn);
+      await tester.pump();
+
+      expect(tappedBirth, equals(3));
+      expect(tappedSurviveMin, equals(2));
+      expect(tappedSurviveMax, equals(3));
+    });
   });
 }

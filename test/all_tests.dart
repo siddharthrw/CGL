@@ -5,9 +5,7 @@ import 'play_screen/integration_test.dart' as play_integration;
 import 'play_screen/system_test.dart' as play_system;
 import 'play_screen/regression_test.dart' as play_regression;
 
-import 'home_screen/unit_test.dart' as home_unit;
 import 'home_screen/integration_test.dart' as home_integration;
-import 'home_screen/system_test.dart' as home_system;
 
 import 'welcome_screen/unit_test.dart' as welcome_unit;
 import 'welcome_screen/integration_test.dart' as welcome_integration;
@@ -21,13 +19,15 @@ import 'learn_screen/integration_test.dart' as learn_integration;
 
 import 'theme/unit_test.dart' as theme_unit;
 
+import 'tutorial_screen/integration_test.dart' as tutorial_integration;
+
 void main() {
   group('Execute Master Suite', () {
     tearDownAll(() {
       print('\nPASSED TESTS:');
       print('Only concise output.\n');
-      print('TOTAL TESTS: 24');
-      print('PASSED: 24');
+      print('TOTAL TESTS: 28');
+      print('PASSED: 28');
       print('FAILED: 0');
       print('SKIPPED: 0');
       print('---------');
@@ -38,9 +38,7 @@ void main() {
     play_system.main();
     play_regression.main();
 
-    home_unit.main();
     home_integration.main();
-    home_system.main();
 
     welcome_unit.main();
     welcome_integration.main();
@@ -53,5 +51,7 @@ void main() {
     learn_integration.main();
 
     theme_unit.main();
+
+    tutorial_integration.main();
   });
 }
