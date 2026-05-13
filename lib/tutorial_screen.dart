@@ -45,64 +45,33 @@ class _TutorialScreenState extends State<TutorialScreen> {
                 },
                 children: [
                   _buildSlide(
-                    visual: const _MiniDemo(frames: _toad, crossAxisCount: 6),
-                    title: "About the Game",
-                    description:
-                        "Conway's Game of Life is a fascinating 'zero-player game'. As the creator, you populate the grid with an initial pattern of cells. Once you start the simulation, the world evolves entirely on its own based on pure mathematics.",
-                  ),
-                  _buildSlide(
                     visual: const _MiniDemo(frames: _drawing, crossAxisCount: 5),
                     title: "The Grid & Cells",
                     description:
-                        "The universe is an infinite 2D grid. Each square is a 'cell' that can either be Alive (bright green) or Dead (dark space).\n\nBefore running the simulation, simply tap the squares to draw your starting community.",
+                        "The universe is an infinite 2D grid. Each square is a 'cell' that can either be Alive (bright green) or Dead (dark space).\n\nTap the squares to draw your starting community.",
                   ),
-                  _buildSlide(
-                    visual: const _MiniDemo(frames: _underpopulation, crossAxisCount: 5),
-                    title: "Rule 1: Death 🥀",
-                    description: "Cells need a community! If a living cell has 0 or 1 neighbors, it dies of loneliness in the next generation.",
-                  ),
-                  _buildSlide(
-                    visual: const _MiniDemo(frames: _survival, crossAxisCount: 5),
-                    title: "Rule 2: Survival 🛡️",
-                    description: "Perfect balance. If a living cell has exactly 2 or 3 neighbors, it survives happily into the next generation.",
-                  ),
-                  _buildSlide(
-                    visual: const _MiniDemo(frames: _overpopulation, crossAxisCount: 5),
-                    title: "Rule 3: Overpopulation 👥",
-                    description: "Too crowded! If a cell has 4 or more neighbors, it dies from a lack of resources.",
-                  ),
-                  _buildSlide(
-                    visual: const _MiniDemo(frames: _reproduction, crossAxisCount: 5),
-                    title: "Rule 4: Birth ✨",
-                    description: "Life finds a way! If an empty space is surrounded by EXACTLY 3 neighbors, a brand new cell is born.",
-                  ),
-                  _buildSlide(
-                    visual: const _MiniDemo(frames: _glider, crossAxisCount: 5),
-                    title: "Endless Possibilities",
-                    description:
-                        "From these simple rules, magical behaviors emerge. You will discover shapes that sit still, patterns that oscillate forever, and 'spaceships' that glide across the board.\n\nDraw, experiment, and see what you can create!",
-                  ),
+                  _buildRuleSummarySlide(),
                   const _InteractiveDemoSlide(),
                   _buildFinalSlide(),
                 ],
               ),
             ),
             // Bottom Navigation Indicators
-            if (_currentPage != 8)
+            if (_currentPage != 3)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(
-                      onPressed: () => _controller.jumpToPage(8), // Jump to last slide
+                      onPressed: () => _controller.jumpToPage(3), // Jump to last slide
                       child: const Text(
                         "SKIP",
                         style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
                       ),
                     ),
                     Row(
-                      children: List.generate(9, (index) => _buildDot(index)),
+                      children: List.generate(4, (index) => _buildDot(index)),
                     ),
                     TextButton(
                       onPressed: () {
@@ -152,6 +121,73 @@ class _TutorialScreenState extends State<TutorialScreen> {
               color: Colors.white70,
               fontSize: 16,
               height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRuleSummarySlide() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            "Rules of Life",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 30),
+          _ruleRow("SURVIVAL", "2 or 3 neighbors", _survival),
+          _ruleRow("BIRTH", "Exactly 3 neighbors", _reproduction),
+          _ruleRow("DEATH (Lonely)", "0 or 1 neighbors", _underpopulation),
+          _ruleRow("DEATH (Crowded)", "4+ neighbors", _overpopulation),
+        ],
+      ),
+    );
+  }
+
+  Widget _ruleRow(String title, String condition, List<List<int>> frames) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: green.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: green.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          _MiniDemo(frames: frames, crossAxisCount: 5, size: 60),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: green,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  condition,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -216,8 +252,9 @@ class _TutorialScreenState extends State<TutorialScreen> {
 class _MiniDemo extends StatefulWidget {
   final List<List<int>> frames;
   final int crossAxisCount;
+  final double size;
 
-  const _MiniDemo({required this.frames, this.crossAxisCount = 5});
+  const _MiniDemo({required this.frames, this.crossAxisCount = 5, this.size = 140});
 
   @override
   State<_MiniDemo> createState() => _MiniDemoState();
@@ -249,8 +286,8 @@ class _MiniDemoState extends State<_MiniDemo> {
   Widget build(BuildContext context) {
     final frame = widget.frames[_currentIndex];
     return SizedBox(
-      width: 140,
-      height: 140,
+      width: widget.size,
+      height: widget.size,
       child: GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -275,11 +312,6 @@ class _MiniDemoState extends State<_MiniDemo> {
 }
 
 // Demo Patterns
-const _toad = [
-  [0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,1,1,1,0, 0,1,1,1,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0],
-  [0,0,0,0,0,0, 0,0,0,1,0,0, 0,1,0,0,1,0, 0,1,0,0,1,0, 0,0,1,0,0,0, 0,0,0,0,0,0],
-];
-
 const _drawing = [
   [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
   [0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
@@ -305,13 +337,6 @@ const _overpopulation = [
 const _reproduction = [
   [0,0,0,0,0, 0,1,1,0,0, 0,1,0,0,0, 0,0,0,0,0, 0,0,0,0,0], // L shape
   [0,0,0,0,0, 0,1,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0], // 4th cell spawns
-];
-
-const _glider = [
-  [0,0,1,0,0, 1,0,1,0,0, 0,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-  [0,1,0,0,0, 0,1,1,0,0, 1,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-  [0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-  [0,0,0,0,0, 0,1,0,1,0, 0,0,1,1,0, 0,0,1,0,0, 0,0,0,0,0],
 ];
 
 class _InteractiveDemoSlide extends StatefulWidget {
