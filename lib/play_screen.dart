@@ -42,7 +42,7 @@ class PlayScreenState extends State<PlayScreen> {
   List<String> history = [];
 
   bool _isSpeedUp = false;
-  int _hardWinCount = 0;
+  int _winCount = 0;
   bool _showLevelPopup = false;
 
   @override
@@ -66,15 +66,12 @@ class PlayScreenState extends State<PlayScreen> {
   }
 
   void _handleWin() {
-    // Check if the current settings match the 'Hard' level
-    if (widget.birthRule == 4 && widget.surviveMin == 4 && widget.surviveMax == 4) {
-      _hardWinCount++;
-      if (_hardWinCount == 2) {
-        _showLevelPopup = true;
-        Future.delayed(const Duration(seconds: 5), () {
-          if (mounted) setState(() => _showLevelPopup = false);
-        });
-      }
+    _winCount++;
+    if (_winCount == 2) {
+      _showLevelPopup = true;
+      Future.delayed(const Duration(seconds: 6), () {
+        if (mounted) setState(() => _showLevelPopup = false);
+      });
     }
   }
 
@@ -552,27 +549,40 @@ class PlayScreenState extends State<PlayScreen> {
         if (_showLevelPopup)
           Positioned(
             top: 45,
-            right: 16,
+            right: 60,
             child: Material(
               color: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: green,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: green.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text("Want to try changing the level?", style: TextStyle(color: bg, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () => setState(() => _showLevelPopup = false),
-                      child: const Icon(Icons.close, color: bg, size: 18),
-                    )
-                  ],
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(right: 28),
+                    child: Icon(Icons.arrow_drop_up, color: green, size: 30),
+                  ),
+                  Transform.translate(
+                    offset: const Offset(0, -10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: green.withOpacity(0.5)),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text("Change the difficulty ?", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 16),
+                          GestureDetector(
+                            onTap: () => setState(() => _showLevelPopup = false),
+                            child: const Icon(Icons.close, color: Colors.grey, size: 18),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -46,6 +46,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
       else if (step == 2) _playSurvivalAnimation();
       else if (step == 3) _playOverpopAnimation();
       else if (step == 4) _playBirthAnimation();
+      else if (step == 5) _playWinLoseAnimation();
     }
   }
 
@@ -179,11 +180,54 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     setState(() { filled.add(55); overrides.clear(); });
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-    
+    _startWinLoseSequence();
+  }
+
+  // --- STEP 5: WIN & LOSE ---
+  void _startWinLoseSequence() {
     setState(() {
       step = 5;
+      title = "Winning & Losing";
+      subtitle = "Tap 3 cells in a row.";
+      targets = {44, 45, 46};
+      filled.clear();
+      allowTap = true;
+    });
+  }
+
+  Future<void> _playWinLoseAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    setState(() => subtitle = "If cells stabilize or loop endlessly, you WIN!");
+
+    // Blinker animation
+    for (int i = 0; i < 3; i++) {
+      setState(() {
+        filled.clear();
+        overrides[44] = Colors.transparent; overrides[46] = Colors.transparent;
+        overrides[35] = green; overrides[45] = green; overrides[55] = green;
+      });
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      setState(() {
+        overrides.clear();
+        filled.addAll({44, 45, 46});
+      });
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+    }
+
+    setState(() {
+      filled.clear(); overrides.clear();
+      subtitle = "But if all cells die and the grid becomes completely empty, you LOSE.";
+    });
+    await Future.delayed(const Duration(seconds: 4));
+    if (!mounted) return;
+    
+    setState(() {
+      step = 6;
       title = "You're Ready!";
-      subtitle = "If your cells survive and stabilize, you win! If they all die, you lose.\nGo create life!";
+      subtitle = "Go create life!";
     });
   }
 
@@ -254,7 +298,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
                 ),
               ),
               const Spacer(),
-              if (step == 5)
+              if (step == 6)
                 SizedBox(
                   width: double.infinity,
                   height: 56,
