@@ -35,7 +35,8 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('ENTER GRID'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1850));
+      await tester.pump(const Duration(milliseconds: 1000));
+      await tester.pump(const Duration(milliseconds: 850));
     }
 
     testWidgets('EMPTY GRID detection', (WidgetTester tester) async {

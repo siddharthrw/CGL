@@ -23,15 +23,7 @@ import 'tutorial_screen/integration_test.dart' as tutorial_integration;
 
 void main() {
   group('Execute Master Suite', () {
-    tearDownAll(() {
-      print('\nPASSED TESTS:');
-      print('Only concise output.\n');
-      print('TOTAL TESTS: 28');
-      print('PASSED: 28');
-      print('FAILED: 0');
-      print('SKIPPED: 0');
-      print('---------');
-    });
+
 
     play_unit.main();
     play_integration.main();

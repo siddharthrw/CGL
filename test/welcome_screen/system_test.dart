@@ -13,7 +13,8 @@ void main() {
       
       // Delay of 1000ms + transition of 800ms
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1850));
+      await tester.pump(const Duration(milliseconds: 1000));
+      await tester.pump(const Duration(milliseconds: 850));
 
       // Should be on HomeScreen
       expect(find.byType(HomeScreen), findsOneWidget);
@@ -26,7 +27,8 @@ void main() {
       
       // Delay of 1000ms + transition of 800ms
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1850));
+      await tester.pump(const Duration(milliseconds: 1000));
+      await tester.pump(const Duration(milliseconds: 850));
 
       // Should be on TutorialScreen
       expect(find.byType(TutorialScreen), findsOneWidget);
