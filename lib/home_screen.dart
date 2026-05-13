@@ -1,11 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme.dart';
 import 'play_screen.dart';
 import 'learn_screen.dart';
+import 'tutorial_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialTab;
@@ -27,9 +26,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey playBtnKey = GlobalKey();
   final GlobalKey ruleLabBtnKey = GlobalKey();
   final GlobalKey learnTabKey = GlobalKey();
-  late TutorialCoachMark tutorialCoachMark;
-
-  DateTime _lastTutorialTap = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
@@ -58,179 +54,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void showTutorial() {
-    if (currentTab != 0) {
-      setState(() => currentTab = 0);
-      Future.delayed(const Duration(milliseconds: 300), _initTutorial);
-    } else {
-      _initTutorial();
-    }
-  }
-
-  void _advanceTutorial() {
-    final now = DateTime.now();
-    // 800ms cooldown physically prevents double-jumping while the 600ms animation plays
-    if (now.difference(_lastTutorialTap).inMilliseconds < 800) return;
-    _lastTutorialTap = now;
-    tutorialCoachMark.next();
-  }
-
-  void _initTutorial() {
-    tutorialCoachMark = TutorialCoachMark(
-      targets: _createTargets(),
-      colorShadow: Colors.black, // Pure black for better contrast
-      paddingFocus: 15,
-      opacityShadow: 0.96, // Much darker to hide background text entirely
-      focusAnimationDuration: const Duration(milliseconds: 600), // Smooth slide
-      unFocusAnimationDuration: const Duration(milliseconds: 600),
-      pulseAnimationDuration: const Duration(milliseconds: 1000), // Softer pulse
-      hideSkip: true, 
-      onClickOverlay: (target) {
-        _advanceTutorial();
-      },
-      onClickTarget: (target) {
-        // The package automatically advances 1 step when the target is tapped.
-        // Update the timestamp so overlay taps don't double-jump right after.
-        _lastTutorialTap = DateTime.now();
-      },
-    )..show(context: context);
-  }
-
-  // A custom widget to make the tutorial text look like a stylized tooltip card
-  Widget _buildTutorialContent(String title, String body) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _advanceTutorial,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: card, // Solid background so text doesn't merge with the app
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: green.withOpacity(0.5), width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.8),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
-            )
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                        color: green, fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    _lastTutorialTap = DateTime.now();
-                    tutorialCoachMark.skip();
-                  },
-                  child: const Text(
-                    "SKIP",
-                    style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.2),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              body,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 15, height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "Tap here to continue",
-              style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
-            )
-          ],
-        ),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TutorialScreen()),
     );
-  }
-
-  List<TargetFocus> _createTargets() {
-    return [
-      TargetFocus(
-        identify: "gridKey",
-        keyTarget: gridKey,
-        alignSkip: Alignment.topRight,
-        shape: ShapeLightFocus.RRect,
-        radius: 12,
-        contents: [
-          TargetContent(
-            align: ContentAlign.bottom,
-            builder: (context, controller) {
-              return _buildTutorialContent(
-                "1. The Grid",
-                "Tap these squares to create Live cells (green). Unlit squares are Empty cells.",
-              );
-            },
-          ),
-        ],
-      ),
-      TargetFocus(
-        identify: "playBtnKey",
-        keyTarget: playBtnKey,
-        alignSkip: Alignment.topRight,
-        shape: ShapeLightFocus.RRect,
-        radius: 16,
-        contents: [
-          TargetContent(
-            align: ContentAlign.top,
-            builder: (context, controller) {
-              return _buildTutorialContent(
-                "2. Start Simulation",
-                "Once you've drawn your pattern, tap here to watch the cells evolve!",
-              );
-            },
-          ),
-        ],
-      ),
-      TargetFocus(
-        identify: "ruleLabBtnKey",
-        keyTarget: ruleLabBtnKey,
-        alignSkip: Alignment.topRight,
-        shape: ShapeLightFocus.Circle, // Highlights the tab with a perfect circle
-        contents: [
-          TargetContent(
-            align: ContentAlign.bottom,
-            builder: (context, controller) {
-              return _buildTutorialContent(
-                "3. Change the Laws",
-                "Go to the Rule Lab to tweak the rules of life (easy, medium, hard, or custom!).",
-              );
-            },
-          ),
-        ],
-      ),
-      TargetFocus(
-        identify: "learnTabKey",
-        keyTarget: learnTabKey,
-        alignSkip: Alignment.topRight,
-        shape: ShapeLightFocus.Circle, // Highlights the tab with a perfect circle
-        contents: [
-          TargetContent(
-            align: ContentAlign.top,
-            builder: (context, controller) {
-              return _buildTutorialContent(
-                "4. Learn More",
-                "Check out this tab to learn how Conway's Game of Life works and what to look out for!",
-              );
-            },
-          ),
-        ],
-      ),
-    ];
   }
 
   @override

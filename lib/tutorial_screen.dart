@@ -21,11 +21,14 @@ class _TutorialScreenState extends State<TutorialScreen> {
   }
 
   void _finishTutorial(int targetTab) {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => HomeScreen(initialTab: targetTab)),
-      (route) => false,
-    );
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen(initialTab: targetTab)),
+      );
+    }
   }
 
   @override
@@ -33,8 +36,10 @@ class _TutorialScreenState extends State<TutorialScreen> {
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
+            Column(
+              children: [
             Expanded(
               child: PageView(
                 controller: _controller,
@@ -90,6 +95,17 @@ class _TutorialScreenState extends State<TutorialScreen> {
               )
             else
               const SizedBox(height: 78), // To keep the layout balanced on the final slide
+          ],
+        ),
+            if (Navigator.canPop(context))
+              Positioned(
+                top: 16,
+                left: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
           ],
         ),
       ),
@@ -559,11 +575,14 @@ class _InteractiveDemoSlideState extends State<_InteractiveDemoSlide> with Singl
                 : _step == _DemoStep.win
                     ? ElevatedButton.icon(
                         onPressed: () {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (_) => const HomeScreen(initialTab: 0)),
-                            (route) => false,
-                          );
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          } else {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const HomeScreen(initialTab: 0)),
+                            );
+                          }
                         },
                         icon: const Icon(Icons.rocket_launch),
                         label: const Text("Play Game"),

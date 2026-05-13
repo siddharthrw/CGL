@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'theme.dart';
 import 'home_screen.dart';
-import 'tutorial_screen.dart';
+import 'story_tutorial_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -221,7 +221,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 context,
                                 PageRouteBuilder(
                                   transitionDuration: const Duration(milliseconds: 800),
-                                    pageBuilder: (_, __, ___) => const TutorialScreen(),
+                                    pageBuilder: (_, __, ___) => const StoryTutorialScreen(),
                                   transitionsBuilder: (_, animation, __, child) {
                                     return FadeTransition(
                                       opacity: animation,
