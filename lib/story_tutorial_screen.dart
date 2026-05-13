@@ -183,7 +183,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     setState(() {
       step = 5;
       title = "You're Ready!";
-      subtitle = "You now know the laws of the universe. Go create life!";
+      subtitle = "If your cells survive and stabilize, you win! If they all die, you lose.\nGo create life!";
     });
   }
 
@@ -203,7 +203,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
               ),
               const SizedBox(height: 16),
               SizedBox(
-                height: 60,
+                height: 80,
                 child: Text(
                   subtitle,
                   textAlign: TextAlign.center,

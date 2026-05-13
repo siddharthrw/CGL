@@ -75,7 +75,7 @@ class LearnScreen extends StatelessWidget {
           faqItem("Is this a game you play?", "It's known as a 'zero-player game'. You set up the initial configuration and watch how it evolves based on the rules without further input!"),
           faqItem("Why is it called the 'Game of Life'?", "Created by mathematician John Conway in 1970, it perfectly simulates the life, death, and reproduction of biological cells using simple math."),
           faqItem("What are Gliders?", "Gliders are special patterns of cells that move across the grid infinitely. They 'fly' diagonally across the board. Try drawing a small asymmetrical shape and see if it moves!"),
-          faqItem("Can I change the rules?", "Absolutely! Tap the 'Rule Lab' icon (the settings gear) at the top of the Play screen to experiment. Changing the required neighbors for birth or survival creates entirely new and bizarre universes."),
+          faqItem("Can I change the rules?", "Absolutely! Tap the 'Rule Lab' icon (the filter icon) at the top of the Play screen to experiment. Changing the required neighbors for birth or survival creates entirely new and bizarre universes."),
           const SizedBox(height: 40),
           const Center(
             child: Text(

@@ -41,6 +41,10 @@ class PlayScreenState extends State<PlayScreen> {
   bool _showOverlay = false;
   List<String> history = [];
 
+  bool _isSpeedUp = false;
+  int _hardWinCount = 0;
+  bool _showLevelPopup = false;
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +63,19 @@ class PlayScreenState extends State<PlayScreen> {
         setState(() => _showOverlay = false);
       }
     });
+  }
+
+  void _handleWin() {
+    // Check if the current settings match the 'Hard' level
+    if (widget.birthRule == 4 && widget.surviveMin == 4 && widget.surviveMax == 4) {
+      _hardWinCount++;
+      if (_hardWinCount == 2) {
+        _showLevelPopup = true;
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted) setState(() => _showLevelPopup = false);
+        });
+      }
+    }
   }
 
   void start() {
@@ -89,12 +106,23 @@ class PlayScreenState extends State<PlayScreen> {
     history.clear();
     history.add(_gridToString(grid));
 
+    _setTimer();
+  }
+
+  void _setTimer() {
+    timer?.cancel();
+    // Reduced overall speed (500ms), but runs twice as fast (200ms) when held
+    int speed = _isSpeedUp ? 200 : 500;
     timer = Timer.periodic(
-      const Duration(milliseconds: 250),
-      (_) {
-        _doTick();
-      },
+      Duration(milliseconds: speed),
+      (_) => _doTick(),
     );
+  }
+
+  void _updateSpeed() {
+    if (timer != null && timer!.isActive) {
+      _setTimer();
+    }
   }
 
   void _doTick() {
@@ -134,7 +162,7 @@ class PlayScreenState extends State<PlayScreen> {
         gameEndMessage = "The cells have found a stable balance.";
         isWin = true;
       });
-      if (isNew) _triggerOverlay();
+      if (isNew) { _triggerOverlay(); _handleWin(); }
     } else {
       if (isOscillating) {
         bool isNew = gameEndTitle == null;
@@ -143,7 +171,7 @@ class PlayScreenState extends State<PlayScreen> {
           gameEndMessage = "The cells are trapped in a repeating pattern!";
           isWin = true;
         });
-        if (isNew) _triggerOverlay();
+        if (isNew) { _triggerOverlay(); _handleWin(); }
       }
       history.add(nextStr);
       if (history.length > 25) {
@@ -230,11 +258,14 @@ class PlayScreenState extends State<PlayScreen> {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            Expanded(
-              child: Column(
-                children: [
+            Column(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -250,7 +281,7 @@ class PlayScreenState extends State<PlayScreen> {
                         children: [
                           IconButton(
                             key: widget.ruleLabBtnKey,
-                            icon: const Icon(Icons.settings, color: green),
+                                icon: const Icon(Icons.filter_list, color: green),
                             onPressed: widget.onRuleLabTap,
                             tooltip: "Rule Lab",
                           ),
@@ -465,6 +496,38 @@ class PlayScreenState extends State<PlayScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
+                GestureDetector(
+                  onTapDown: (_) {
+                    setState(() => _isSpeedUp = true);
+                    _updateSpeed();
+                  },
+                  onTapUp: (_) {
+                    setState(() => _isSpeedUp = false);
+                    _updateSpeed();
+                  },
+                  onTapCancel: () {
+                    setState(() => _isSpeedUp = false);
+                    _updateSpeed();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    height: 52,
+                    width: 52,
+                    decoration: BoxDecoration(
+                      color: _isSpeedUp ? green : card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: _isSpeedUp ? green : Colors.white.withOpacity(0.1)),
+                    ),
+                    child: Center(
+                      child: Text("2x", style: TextStyle(
+                        color: _isSpeedUp ? bg : Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      )),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 SizedBox(
                   height: 52,
                   width: 52,
@@ -483,11 +546,40 @@ class PlayScreenState extends State<PlayScreen> {
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
-      ),
-    );
+        if (_showLevelPopup)
+          Positioned(
+            top: 45,
+            right: 16,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: green,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: green.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text("Want to try changing the level?", style: TextStyle(color: bg, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () => setState(() => _showLevelPopup = false),
+                      child: const Icon(Icons.close, color: bg, size: 18),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  ),
+);
   }
 
   Widget actionButton(String text, IconData icon, VoidCallback? onTap,
