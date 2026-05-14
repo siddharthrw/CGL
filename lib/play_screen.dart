@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme.dart';
 
 class PlayScreen extends StatefulWidget {
@@ -41,9 +42,12 @@ class PlayScreenState extends State<PlayScreen> {
   bool _showOverlay = false;
   List<String> history = [];
 
-  bool _isSpeedUp = false;
+  bool _isSpeedToggled = false; // For tapping
+  bool _isSpeedHeld = false; // For holding
   int _winCount = 0;
   bool _showLevelPopup = false;
+
+  int _highScore = 0;
 
   @override
   void initState() {
@@ -52,6 +56,15 @@ class PlayScreenState extends State<PlayScreen> {
       size,
       (_) => List.filled(size, 0),
     );
+    _loadHighScore();
+  }
+
+  Future<void> _loadHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('highScore', 0); // Force reset to 0 for testing
+    setState(() {
+      _highScore = 0;
+    });
   }
 
   void _triggerOverlay() {
@@ -108,8 +121,9 @@ class PlayScreenState extends State<PlayScreen> {
 
   void _setTimer() {
     timer?.cancel();
-    // Reduced overall speed (500ms), but runs twice as fast (200ms) when held
-    int speed = _isSpeedUp ? 200 : 500;
+    // Speed is 2x if either toggled on or currently held down
+    bool isFast = _isSpeedToggled || _isSpeedHeld;
+    int speed = isFast ? 200 : 500;
     timer = Timer.periodic(
       Duration(milliseconds: speed),
       (_) => _doTick(),
@@ -134,8 +148,11 @@ class PlayScreenState extends State<PlayScreen> {
       }
     }
 
+    bool wasEnded = gameEndTitle != null;
     setState(() {
-      generation++;
+      if (!wasEnded) {
+        generation++;
+      }
       grid = nextGrid;
     });
 
@@ -143,32 +160,55 @@ class PlayScreenState extends State<PlayScreen> {
     bool isOscillating = !isSame && history.contains(nextStr);
 
     if (aliveCount == 0) {
-      pause();
       bool isNew = gameEndTitle == null;
-      setState(() {
-        gameEndTitle = "THE END";
-        gameEndMessage = "All cells are empty. The pattern faded away.";
-        isWin = false;
-      });
-      if (isNew) _triggerOverlay();
+      if (isNew) {
+        pause();
+        setState(() {
+          gameEndTitle = "Your pattern failed";
+          gameEndMessage = "All cells became empty after $generation generations.";
+          isWin = false;
+        });
+        _triggerOverlay();
+      }
     } else if (isSame) {
-      pause();
       bool isNew = gameEndTitle == null;
-      setState(() {
-        gameEndTitle = "STABILIZED!";
-        gameEndMessage = "The cells have found a stable balance.";
-        isWin = true;
-      });
-      if (isNew) { _triggerOverlay(); _handleWin(); }
+      if (isNew) {
+        pause();
+        setState(() {
+          // High Score Logic: Only update on win condition
+          if (aliveCount > _highScore) {
+            _highScore = aliveCount;
+            SharedPreferences.getInstance().then((prefs) {
+              prefs.setInt('highScore', _highScore);
+            });
+          }
+          gameEndTitle = "Your pattern survived with $aliveCount live cells";
+          gameEndMessage = "The pattern stabilized after $generation generations.";
+          isWin = true;
+        });
+        _triggerOverlay();
+        _handleWin();
+      }
     } else {
       if (isOscillating) {
         bool isNew = gameEndTitle == null;
-        setState(() {
-          gameEndTitle = "ENDLESS LOOP!";
-          gameEndMessage = "The cells are trapped in a repeating pattern!";
-          isWin = true;
-        });
-        if (isNew) { _triggerOverlay(); _handleWin(); }
+        if (isNew) {
+          // Intentionally NOT pausing here so the loop continues animating!
+          setState(() {
+            // High Score Logic: Also update on loop condition
+            if (aliveCount > _highScore) {
+              _highScore = aliveCount;
+              SharedPreferences.getInstance().then((prefs) {
+                prefs.setInt('highScore', _highScore);
+              });
+            }
+            gameEndTitle = "Your pattern is looping with $aliveCount live cells";
+            gameEndMessage = "The pattern entered an endless loop after $generation generations.";
+            isWin = true;
+          });
+          _triggerOverlay();
+          _handleWin();
+        }
       }
       history.add(nextStr);
       if (history.length > 25) {
@@ -181,8 +221,12 @@ class PlayScreenState extends State<PlayScreen> {
     timer?.cancel();
   }
 
-  void clear() {
+  void clear({bool andResetHighScore = false}) {
     timer?.cancel();
+
+    if (andResetHighScore) {
+      _resetHighScore();
+    }
 
     setState(() {
       generation = 0;
@@ -197,6 +241,20 @@ class PlayScreenState extends State<PlayScreen> {
         (_) => List.filled(size, 0),
       );
     });
+  }
+
+  Future<void> _resetHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('highScore', 0);
+    if (mounted) {
+      setState(() => _highScore = 0);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("High Score Reset!"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   String _gridToString(List<List<int>> g) {
@@ -276,11 +334,21 @@ class PlayScreenState extends State<PlayScreen> {
                       ),
                       Row(
                         children: [
+                          const Icon(Icons.military_tech, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            "$_highScore",
+                            style: const TextStyle(
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           IconButton(
                             key: widget.ruleLabBtnKey,
                                 icon: const Icon(Icons.filter_list, color: green),
                             onPressed: widget.onRuleLabTap,
-                            tooltip: "Rule Lab",
+                            tooltip: "Experiment with Rules",
                           ),
                           IconButton(
                             icon: const Icon(Icons.help_outline, color: green),
@@ -296,7 +364,39 @@ class PlayScreenState extends State<PlayScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 72,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Status: $status   •   Live cells: $aliveCount",
+                          style: const TextStyle(
+                              color: green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14),
+                        ),
+                        if (gameEndMessage != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            gameEndMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            "Try to keep more cells alive at the end!",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white54, fontSize: 12, fontStyle: FontStyle.italic),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -416,147 +516,128 @@ class PlayScreenState extends State<PlayScreen> {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 116,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (gameEndTitle != null)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 16),
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: isWin
-                                  ? green.withOpacity(0.1)
-                                  : Colors.redAccent.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
+                    height: 56,
+                    child: Center(
+                      child: gameEndTitle != null
+                          ? Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 16),
+                              decoration: BoxDecoration(
                                 color: isWin
-                                    ? green.withOpacity(0.3)
-                                    : Colors.redAccent.withOpacity(0.3),
+                                    ? green.withOpacity(0.1)
+                                    : Colors.redAccent.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isWin
+                                      ? green.withOpacity(0.3)
+                                      : Colors.redAccent.withOpacity(0.3),
+                                ),
                               ),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
+                              child: Center(
+                                child: Text(
                                   gameEndTitle!,
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: isWin ? green : Colors.redAccent,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    letterSpacing: 1.2,
+                                    fontSize: 15,
+                                    letterSpacing: 1.1,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  gameEndMessage!,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      color: Colors.white70, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 12, left: 16, right: 16),
-                            child: Text(
+                              ),
+                            )
+                          : const Text(
                               "Draw cells on the grid and press Play!",
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
                             ),
-                          ),
-                        Text(
-                          "Status: $status   •   Live cells: $aliveCount",
-                          style: const TextStyle(
-                              color: green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14),
-                        ),
-                      ],
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: actionButton(
+                          "Play",
+                          Icons.play_arrow,
+                          start,
+                          isPrimary: true,
+                          key: widget.playBtnKey,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() => _isSpeedToggled = !_isSpeedToggled);
+                          _updateSpeed();
+                        },
+                        onLongPressStart: (_) {
+                          setState(() => _isSpeedHeld = true);
+                          _updateSpeed();
+                        },
+                        onLongPressEnd: (_) {
+                          setState(() => _isSpeedHeld = false);
+                          _updateSpeed();
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          height: 52,
+                          width: 52,
+                          // Button is active if toggled on OR held down
+                          decoration: BoxDecoration(
+                            color: (_isSpeedToggled || _isSpeedHeld) ? green : card,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: (_isSpeedToggled || _isSpeedHeld) ? green : Colors.white.withOpacity(0.1)),
+                          ),
+                          child: Center(
+                            child: Text((_isSpeedToggled || _isSpeedHeld) ? "2x" : "1x", style: TextStyle(
+                              color: (_isSpeedToggled || _isSpeedHeld) ? bg : Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            )),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        height: 52,
+                        width: 52,
+                        child: ElevatedButton(
+                          onPressed: () => clear(),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            backgroundColor: card,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                            ),
+                          ),
+                          child: const Icon(Icons.refresh, size: 24),
+                          onLongPress: () {
+                            clear(andResetHighScore: true);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: actionButton(
-                    "Play",
-                    Icons.play_arrow,
-                    start,
-                    isPrimary: true,
-                    key: widget.playBtnKey,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTapDown: (_) {
-                    setState(() => _isSpeedUp = true);
-                    _updateSpeed();
-                  },
-                  onTapUp: (_) {
-                    setState(() => _isSpeedUp = false);
-                    _updateSpeed();
-                  },
-                  onTapCancel: () {
-                    setState(() => _isSpeedUp = false);
-                    _updateSpeed();
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    height: 52,
-                    width: 52,
-                    decoration: BoxDecoration(
-                      color: _isSpeedUp ? green : card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _isSpeedUp ? green : Colors.white.withOpacity(0.1)),
-                    ),
-                    child: Center(
-                      child: Text("2x", style: TextStyle(
-                        color: _isSpeedUp ? bg : Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      )),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 52,
-                  width: 52,
-                  child: ElevatedButton(
-                    onPressed: clear,
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      backgroundColor: card,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                      ),
-                    ),
-                    child: const Icon(Icons.refresh, size: 24),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
         if (_showLevelPopup)
           Positioned(
             top: 45,
-            right: 60,
+            right: 0,
             child: Material(
               color: Colors.transparent,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   const Padding(
-                    padding: EdgeInsets.only(right: 28),
+                    padding: EdgeInsets.only(right: 78),
                     child: Icon(Icons.arrow_drop_up, color: green, size: 30),
                   ),
                   Transform.translate(

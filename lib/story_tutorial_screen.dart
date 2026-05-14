@@ -300,20 +300,6 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           child: Column(
             children: [
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: green, fontSize: 32, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 80,
-                child: Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.5),
-                ),
-              ),
               const Spacer(),
               Center(
                 child: SizedBox(
@@ -355,6 +341,21 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
                       );
                     },
                   ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: green, fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 80,
+                child: Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.5),
                 ),
               ),
               const Spacer(),
