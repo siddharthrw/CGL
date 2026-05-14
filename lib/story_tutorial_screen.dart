@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme.dart';
 import 'home_screen.dart';
 
@@ -37,7 +38,10 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
     super.dispose();
   }
 
-  void _finish() {
+  void _finish() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isFirstTime', false);
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen(initialTab: 0)),
@@ -72,13 +76,6 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
     else if (step == 3) _startOverpopSequence();
     else if (step == 4) _startBirthSequence();
     else if (step == 5) _startWinLoseSequence();
-    else if (step == 6) {
-      setState(() {
-        step = 7;
-        title = "You're Ready!";
-        subtitle = "Go create life!";
-      });
-    }
   }
 
   // --- STEP 1: NEIGHBORS ---
@@ -117,7 +114,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
     setState(() {
       for (var n in neighbors) overrides[n] = Colors.yellowAccent.withOpacity(0.6);
     });
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
 
     setState(() => _showNextButton = true);
@@ -152,7 +149,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
     }
 
     setState(() { filled.clear(); overrides.clear(); });
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() => _showNextButton = true);
   }
@@ -185,7 +182,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
     }
     
     setState(() => overrides.clear());
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() => _showNextButton = true);
   }
@@ -218,7 +215,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
     }
 
     setState(() { filled.remove(44); overrides.clear(); });
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() => _showNextButton = true);
   }
@@ -251,7 +248,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
     }
 
     setState(() { filled.add(55); overrides.clear(); });
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() => _showNextButton = true);
   }
@@ -311,7 +308,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
       setState(() => overrides.clear());
     }
 
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
 
     setState(() => _showNextButton = true);
@@ -331,44 +328,60 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
                   child: SizedBox(
                     width: 300,
                     height: 300,
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: size),
-                    itemCount: size * size,
-                    itemBuilder: (context, index) {
-                      bool isTarget = targets.contains(index);
-                      bool isFilled = filled.contains(index);
-                      Color? overrideColor = overrides[index];
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        GridView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: size),
+                          itemCount: size * size,
+                          itemBuilder: (context, index) {
+                            bool isTarget = targets.contains(index);
+                            bool isFilled = filled.contains(index);
+                            Color? overrideColor = overrides[index];
 
-                      Color cellColor;
-                      if (overrideColor != null) {
-                        cellColor = overrideColor;
-                      } else if (isFilled) {
-                        cellColor = green;
-                      } else if (isTarget && !isFilled) {
-                        cellColor = green.withOpacity(0.2); // Hint color
-                      } else {
-                        cellColor = Colors.white.withOpacity(0.05); // Empty
-                      }
+                            Color cellColor;
+                            if (overrideColor != null) {
+                              cellColor = overrideColor;
+                            } else if (isFilled) {
+                              cellColor = green;
+                            } else if (isTarget && !isFilled) {
+                              cellColor = green.withOpacity(0.2); // Hint color
+                            } else {
+                              cellColor = Colors.white.withOpacity(0.05); // Empty
+                            }
 
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => _onCellTap(index),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          margin: const EdgeInsets.all(1.5),
-                          decoration: BoxDecoration(
-                            color: cellColor,
-                            border: Border.all(color: cellColor == green.withOpacity(0.2) ? green.withOpacity(0.5) : Colors.white.withOpacity(0.1)),
-                            borderRadius: BorderRadius.circular(4),
-                            boxShadow: isFilled ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)] : [],
-                          ),
+                            return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => _onCellTap(index),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin: const EdgeInsets.all(1.5),
+                                decoration: BoxDecoration(
+                                  color: cellColor,
+                                  border: Border.all(color: cellColor == green.withOpacity(0.2) ? green.withOpacity(0.5) : Colors.white.withOpacity(0.1)),
+                                  borderRadius: BorderRadius.circular(4),
+                                  boxShadow: isFilled ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)] : [],
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
+                        if (allowTap)
+                          Positioned(
+                            child: IgnorePointer(
+                              child: SlideTransition(
+                                position: Tween<Offset>(begin: const Offset(0, -0.3), end: const Offset(0, 0.3)).animate(
+                                  CurvedAnimation(parent: _swipeController, curve: Curves.easeInOut),
+                                ),
+                                child: Icon(Icons.touch_app, size: 60, color: Colors.white.withOpacity(0.8)),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
                 const Spacer(),
                 Text(
                   title,
@@ -394,7 +407,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
                         onPressed: _finish,
                         child: const Text("SKIP TUTORIAL", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                       ),
-                      if (step == 7)
+                      if (_showNextButton && step == 6)
                         ElevatedButton.icon(
                           onPressed: _finish,
                           icon: const Icon(Icons.rocket_launch),

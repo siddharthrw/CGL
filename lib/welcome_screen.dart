@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme.dart';
 import 'home_screen.dart';
@@ -19,6 +20,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late AnimationController glow;
   late Timer bgTimer;
   bool _isEntering = false;
+  bool _isFirstTime = true;
 
   final int bgRows = 40;
   final int bgCols = 15;
@@ -27,6 +29,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   void initState() {
     super.initState();
+    _checkFirstTime();
 
     glow = AnimationController(
       vsync: this,
@@ -48,6 +51,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           bgGrid = newGrid;
         });
       }
+    });
+  }
+
+  Future<void> _checkFirstTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isFirstTime = prefs.getBool('isFirstTime') ?? true;
     });
   }
 
@@ -174,14 +184,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             setState(() {
                               _isEntering = true;
                             });
-                            // Let the background zoom in before transitioning
-                            Future.delayed(const Duration(milliseconds: 1000), () {
+                            Future.delayed(const Duration(milliseconds: 1000), () async {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool('isFirstTime', false);
                               if (!mounted) return;
                               Navigator.pushReplacement(
                                 context,
                                 PageRouteBuilder(
                                   transitionDuration: const Duration(milliseconds: 800),
-                                  pageBuilder: (_, __, ___) => const HomeScreen(initialTab: 0),
+                                  pageBuilder: (_, __, ___) => _isFirstTime ? const StoryTutorialScreen() : const HomeScreen(initialTab: 0),
                                   transitionsBuilder: (_, animation, __, child) {
                                     return FadeTransition(
                                       opacity: animation,
@@ -199,8 +210,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             shadowColor: green.withOpacity(0.5),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),
-                          child: const Text(
-                            "ENTER GRID",
+                          child: Text(
+                            _isFirstTime ? "START TUTORIAL" : "ENTER GRID",
                             style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
                           ),
                         ),
@@ -210,18 +221,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         width: 240,
                         height: 56,
                         child: OutlinedButton(
-                          onPressed: () {
+                          onPressed: _isFirstTime ? null : () {
                             if (_isEntering) return;
                             setState(() {
                               _isEntering = true;
                             });
-                            Future.delayed(const Duration(milliseconds: 1000), () {
+                            // Let the background zoom in before transitioning
+                            Future.delayed(const Duration(milliseconds: 1000), () async {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool('isFirstTime', false);
                               if (!mounted) return;
                               Navigator.pushReplacement(
                                 context,
                                 PageRouteBuilder(
                                   transitionDuration: const Duration(milliseconds: 800),
-                                    pageBuilder: (_, __, ___) => const StoryTutorialScreen(),
+                                  pageBuilder: (_, __, ___) => const StoryTutorialScreen(),
                                   transitionsBuilder: (_, animation, __, child) {
                                     return FadeTransition(
                                       opacity: animation,
@@ -233,13 +247,17 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             });
                           },
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: green,
-                            side: const BorderSide(color: green, width: 2),
+                            foregroundColor: _isFirstTime ? Colors.white30 : green,
+                            side: BorderSide(color: _isFirstTime ? Colors.white12 : green, width: 2),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           ),
-                          child: const Text(
-                            "START TUTORIAL",
-                            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                          child: Text(
+                            _isFirstTime ? "ENTER GRID" : "START TUTORIAL",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900, 
+                              letterSpacing: 1.5,
+                              color: _isFirstTime ? Colors.white30 : green
+                            ),
                           ),
                         ),
                       ),

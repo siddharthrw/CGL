@@ -52,8 +52,9 @@ class PlayScreenState extends State<PlayScreen> {
   int _highScore = 0;
 
   final GlobalKey _speedBtnKey = GlobalKey();
-  bool _speedTutorialShown = false;
-  OverlayEntry? _speedTutorialOverlay;
+  final GlobalKey _refreshBtnKey = GlobalKey();
+  final GlobalKey _statusAreaKey = GlobalKey();
+  int _tutorialStep = -1;
 
   @override
   void initState() {
@@ -64,117 +65,27 @@ class PlayScreenState extends State<PlayScreen> {
     );
     _initialGridSnapshot = List.generate(size, (_) => List.filled(size, 0));
     _loadHighScore();
-    _checkSpeedTutorial();
+    _checkPlayTutorial();
   }
 
-  Future<void> _checkSpeedTutorial() async {
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkPlayTutorial() async {
     final prefs = await SharedPreferences.getInstance();
-    // Force reset for testing so the tooltip shows up again immediately!
-    await prefs.setBool('speedTutorialShown', false);
-    _speedTutorialShown = false;
-  }
+    
+    // Force the tutorial to reset and show again so you can see the full walkthrough!
+    await prefs.setBool('playScreenTutorialShown', false);
 
-  void _showSpeedTutorial() {
-    if (_speedTutorialShown || _speedTutorialOverlay != null || !mounted) return;
-
-    final RenderBox? renderBox = _speedBtnKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
-
-    final size = renderBox.size;
-    final position = renderBox.localToGlobal(Offset.zero);
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    final btnCenterRight = screenWidth - (position.dx + size.width / 2);
-    final tooltipRight = btnCenterRight - 26; // Aligns the right edge so the arrow (26px from right) hits button center
-    final btnTopFromBottom = screenHeight - position.dy;
-
-    _speedTutorialOverlay = OverlayEntry(
-      builder: (context) {
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _hideSpeedTutorial,
-          child: Stack(
-            children: [
-              Positioned(
-                right: tooltipRight,
-                bottom: btnTopFromBottom + 4, // Exactly 4px above the top of the button
-                child: IgnorePointer(child: _buildTutorialTooltip()),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    Overlay.of(context).insert(_speedTutorialOverlay!);
-
-    // Auto-hide after 5 seconds
-    Future.delayed(const Duration(seconds: 5), _hideSpeedTutorial);
-  }
-
-  void _hideSpeedTutorial() {
-    if (_speedTutorialOverlay != null) {
-      _speedTutorialOverlay!.remove();
-      _speedTutorialOverlay = null;
-      if (!_speedTutorialShown) {
-        _markSpeedTutorialShown();
-      }
+    bool shown = prefs.getBool('playScreenTutorialShown') ?? false;
+    if (!shown) {
+      setState(() {
+        _tutorialStep = 0;
+      });
     }
-  }
-
-  void _markSpeedTutorialShown() {
-    _speedTutorialShown = true;
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setBool('speedTutorialShown', true);
-    });
-  }
-
-  Widget _buildTutorialTooltip() {
-    return Material(
-      color: Colors.transparent,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Container(
-            width: 180, // Constrains width so it wraps text and fits nicely on screen
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: card,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: green.withOpacity(0.5)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
-              ],
-            ),
-            child: const Text(
-              "Change speed by tapping or holding!",
-              style: TextStyle(color: Colors.white, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Transform.translate(
-            offset: const Offset(0, -1), // Shift slightly up to merge seamlessly with the green box border
-            child: Container(
-              margin: const EdgeInsets.only(right: 18), // Shifts arrow leftwards to align with button center
-              child: CustomPaint(
-                painter: _ArrowPainter(
-                  color: card,
-                  borderColor: green.withOpacity(0.5),
-                ),
-                size: const Size(16, 8),
-              ),
-            ),
-          )
-        ],
-      ),
-    );
   }
 
   Future<void> _loadHighScore() async {
@@ -198,6 +109,10 @@ class PlayScreenState extends State<PlayScreen> {
 
   void start() {
     timer?.cancel();
+
+    if (_tutorialStep == 1) {
+      setState(() => _tutorialStep = 2);
+    }
 
     setState(() {
       gameEndTitle = null;
@@ -227,12 +142,11 @@ class PlayScreenState extends State<PlayScreen> {
     history.add(_gridToString(grid));
 
     _setTimer();
-    
-    if (!_speedTutorialShown) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _showSpeedTutorial();
-      });
-    }
+  }
+
+  void tryAgain() {
+    // Completely reset everything and bring back the "Play" button
+    clear();
   }
 
   void _setTimer() {
@@ -383,15 +297,25 @@ class PlayScreenState extends State<PlayScreen> {
        final cellPaintAlive = Paint()..color = green;
        final cellPaintDead = Paint()..color = Colors.white.withOpacity(0.05);
        
-       final borderPaintDead = Paint()..color = Colors.white.withOpacity(0.15)..style = PaintingStyle.stroke..strokeWidth = 1.5;
-       final borderPaintAlive = Paint()..color = green.withOpacity(0.8)..style = PaintingStyle.stroke..strokeWidth = 1.5;
+       final borderPaintDead = Paint()..color = Colors.white.withOpacity(0.15)..style = PaintingStyle.stroke..strokeWidth = 1.0;
+       final borderPaintAlive = Paint()..color = green..style = PaintingStyle.stroke..strokeWidth = 1.0;
 
        for (int x = 0; x < size; x++) {
          for (int y = 0; y < size; y++) {
-           final rect = Rect.fromLTWH(offset.dx + y * cellSize, offset.dy + x * cellSize, cellSize, cellSize);
+           // Adding a small gap to separate the cells and reveal the dark background as grid lines
+           final gap = 1.5;
+           final rect = RRect.fromRectAndRadius(
+             Rect.fromLTWH(
+               offset.dx + y * cellSize + gap, 
+               offset.dy + x * cellSize + gap, 
+               cellSize - gap * 2, 
+               cellSize - gap * 2
+             ),
+             const Radius.circular(2), // Matches the slightly rounded corners in the app
+           );
            final isAlive = gridData[x][y] == 1;
-           c.drawRect(rect, isAlive ? cellPaintAlive : cellPaintDead);
-           c.drawRect(rect, isAlive ? borderPaintAlive : borderPaintDead);
+           c.drawRRect(rect, isAlive ? cellPaintAlive : cellPaintDead);
+           c.drawRRect(rect, isAlive ? borderPaintAlive : borderPaintDead);
          }
        }
     }
@@ -466,8 +390,7 @@ class PlayScreenState extends State<PlayScreen> {
   Future<void> _resetHighScore() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('highScore', 0);
-    await prefs.setBool('speedTutorialShown', false);
-    _speedTutorialShown = false;
+    await prefs.setBool('playScreenTutorialShown', false);
     if (mounted) {
       setState(() => _highScore = 0);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -547,103 +470,123 @@ class PlayScreenState extends State<PlayScreen> {
                 Expanded(
                   child: Column(
                     children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "LIFE LAB",
-                        style: TextStyle(
-                          color: green,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        key: _statusAreaKey,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _tutorialStep == 3 ? green : Colors.transparent, width: 2),
+                          boxShadow: _tutorialStep == 3 ? [BoxShadow(color: green.withOpacity(0.2), blurRadius: 15, spreadRadius: 5)] : [],
                         ),
-                      ),
-                      Row(
-                        children: [
-                          const Icon(Icons.military_tech, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            "$_highScore",
-                            style: const TextStyle(
-                              color: Colors.amber,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            key: widget.ruleLabBtnKey,
-                            icon: const Icon(Icons.tune, color: green),
-                            onPressed: widget.onRuleLabTap,
-                            tooltip: "Experiment with Rules",
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.help_outline, color: green),
-                            onPressed: widget.onHelpTap,
-                            tooltip: "Tutorial",
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "GEN $generation",
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 76,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Column(
                           children: [
-                            Text(
-                              generation == 0 
-                                  ? "Live cells drawn: $aliveCount"
-                                  : "Started: $_initialCellsCount   •   Current: $aliveCount",
-                              style: const TextStyle(
-                                  color: green,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14),
-                            ),
-                            if (generation > 0 && _initialCellsCount > 0) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: growthColor.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: growthColor.withOpacity(0.5)),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "LIFE LAB",
+                                  style: TextStyle(
+                                    color: green,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                                child: Row(
+                                Row(
                                   children: [
-                                    Icon(growthIcon, color: growthColor, size: 14),
+                                    const Icon(Icons.military_tech, color: Colors.amber, size: 16),
                                     const SizedBox(width: 4),
                                     Text(
-                                      "${growthMultiplier.toStringAsFixed(1)}x",
-                                      style: TextStyle(color: growthColor, fontWeight: FontWeight.bold, fontSize: 12),
+                                      "$_highScore",
+                                      style: const TextStyle(
+                                        color: Colors.amber,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: _tutorialStep == 5 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15)] : [],
+                                      ),
+                                      child: IconButton(
+                                        key: widget.ruleLabBtnKey,
+                                        icon: const Icon(Icons.tune, color: green),
+                                        onPressed: widget.onRuleLabTap,
+                                        tooltip: "Experiment with Rules",
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.help_outline, color: green),
+                                      onPressed: widget.onHelpTap,
+                                      tooltip: "Tutorial",
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "GEN $generation",
+                                      style: const TextStyle(color: Colors.grey),
                                     ),
                                   ],
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 76,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        generation == 0 
+                                            ? "Live cells drawn: $aliveCount"
+                                            : "Started: $_initialCellsCount   •   Current: $aliveCount",
+                                        style: const TextStyle(
+                                            color: green,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14),
+                                      ),
+                                      if (generation > 0 && _initialCellsCount > 0) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: growthColor.withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: growthColor.withOpacity(0.5)),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(growthIcon, color: growthColor, size: 14),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                "${growthMultiplier.toStringAsFixed(1)}x",
+                                                style: TextStyle(color: growthColor, fontWeight: FontWeight.bold, fontSize: 12),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  if (gameEndMessage != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      gameEndMessage!,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: Colors.white70, fontSize: 13),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ],
+                            ),
                           ],
                         ),
-                        if (gameEndMessage != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            gameEndMessage!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                      ),
                   const SizedBox(height: 12),
                   Expanded(
                     child: LayoutBuilder(
@@ -653,9 +596,15 @@ class PlayScreenState extends State<PlayScreen> {
                             : constraints.maxHeight;
                         double cellWidth = gridSize / size;
                         return Center(
-                          child: SizedBox(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
                             width: gridSize,
                             height: gridSize,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _tutorialStep == 0 ? green : Colors.transparent, width: 2),
+                              boxShadow: _tutorialStep == 0 ? [BoxShadow(color: green.withOpacity(0.2), blurRadius: 20, spreadRadius: 5)] : [],
+                            ),
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
@@ -865,21 +814,28 @@ class PlayScreenState extends State<PlayScreen> {
                     children: [
                       Expanded(
                         child: actionButton(
-                          "Play",
-                          Icons.play_arrow,
-                          start,
+                          gameEndTitle != null ? "Play Again" : "Play",
+                          gameEndTitle != null ? Icons.replay : Icons.play_arrow,
+                          gameEndTitle != null ? tryAgain : ((timer != null && timer!.isActive) ? null : start),
                           isPrimary: true,
+                          isTutorialGlow: _tutorialStep == 1,
                           key: widget.playBtnKey,
                         ),
                       ),
                       const SizedBox(width: 12),
                       GestureDetector(
                         onTap: () {
-                          setState(() => _isSpeedToggled = !_isSpeedToggled);
+                          setState(() {
+                            _isSpeedToggled = !_isSpeedToggled;
+                            if (_tutorialStep == 2) _tutorialStep = 3;
+                          });
                           _updateSpeed();
                         },
                         onLongPressStart: (_) {
-                          setState(() => _isSpeedHeld = true);
+                          setState(() {
+                            _isSpeedHeld = true;
+                            if (_tutorialStep == 2) _tutorialStep = 3;
+                          });
                           _updateSpeed();
                         },
                         onLongPressEnd: (_) {
@@ -896,6 +852,7 @@ class PlayScreenState extends State<PlayScreen> {
                             color: (_isSpeedToggled || _isSpeedHeld) ? green : card,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: (_isSpeedToggled || _isSpeedHeld) ? green : Colors.white.withOpacity(0.1)),
+                            boxShadow: _tutorialStep == 2 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
                           ),
                           child: Center(
                             child: Text((_isSpeedToggled || _isSpeedHeld) ? "2x" : "1x", style: TextStyle(
@@ -907,9 +864,15 @@ class PlayScreenState extends State<PlayScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      SizedBox(
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        key: _refreshBtnKey,
                         height: 52,
                         width: 52,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: _tutorialStep == 4 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
+                        ),
                         child: ElevatedButton(
                           onPressed: () => clear(),
                           style: ElevatedButton.styleFrom(
@@ -934,17 +897,125 @@ class PlayScreenState extends State<PlayScreen> {
             ),
           ],
         ),
+                  _buildInlineTutorial(),
       ],
     ),
   ),
 );
   }
 
+  Widget _buildInlineTutorial() {
+    if (_tutorialStep < 0) return const SizedBox.shrink();
+
+    String title = "";
+    String desc = "";
+    bool showNext = false;
+    bool nextEnabled = true;
+    String nextText = "NEXT";
+    VoidCallback? onNext = () => setState(() => _tutorialStep++);
+    bool isTop = true;
+
+    switch (_tutorialStep) {
+      case 0:
+        title = "1. Draw Life";
+        desc = "Tap or drag your finger across the grid to draw a starting pattern of 'Live' cells.";
+        showNext = true;
+        int alive = grid.expand((e) => e).where((c) => c == 1).length;
+        nextEnabled = alive > 0;
+        isTop = true;
+        break;
+      case 1:
+        title = "2. Evolve";
+        desc = "Great! Now press the glowing 'Play' button below to watch your cells evolve.";
+        showNext = false; // Auto advances on play
+        isTop = true;
+        break;
+      case 2:
+        title = "3. Speed Control";
+        desc = "Simulation running too slow? Tap the glowing '1x' button to toggle 2x speed, or hold it down for a boost!";
+        showNext = true; // They can tap next if they don't want to change speed
+        isTop = true;
+        break;
+      case 3:
+        title = "4. How to Win";
+        desc = "To win, your pattern must stabilize into a loop or stop changing. If all cells die, you lose! The more your cells multiply, the better your Badge.";
+        showNext = true;
+        isTop = false; // Status area is at top, put dialog at bottom
+        break;
+      case 4:
+        title = "5. Clear & Reset";
+        desc = "Want a clean slate? Tap the glowing refresh button to wipe the grid. Long-press it to reset your High Score!";
+        showNext = true;
+        isTop = true;
+        break;
+      case 5:
+        title = "6. Rule Lab";
+        desc = "Play God! Tap the tune icon at the top right to change the rules of physics.";
+        showNext = true;
+        nextText = "LET'S PLAY!";
+        onNext = () {
+          setState(() => _tutorialStep = -1);
+          SharedPreferences.getInstance().then((p) => p.setBool('playScreenTutorialShown', true));
+        };
+        isTop = false;
+        break;
+    }
+
+    return Positioned(
+      top: isTop ? 20 : null,
+      bottom: isTop ? null : 20,
+      left: 10,
+      right: 10,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: card.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: green, width: 2),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.8), blurRadius: 30, spreadRadius: 10)],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(color: green, fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Text(desc, style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4)),
+              if (showNext) ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton(
+                    onPressed: nextEnabled ? onNext : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: green,
+                      foregroundColor: bg,
+                      disabledBackgroundColor: Colors.grey.withOpacity(0.3),
+                      disabledForegroundColor: Colors.white54,
+                    ),
+                    child: Text(nextText, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                )
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget actionButton(String text, IconData icon, VoidCallback? onTap,
-      {bool isPrimary = false, Key? key}) {
-    return SizedBox(
+      {bool isPrimary = false, bool isTutorialGlow = false, Key? key}) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       key: key,
       height: 52,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: isTutorialGlow ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
+      ),
       child: ElevatedButton.icon(
         onPressed: onTap,
         icon: Icon(
@@ -963,7 +1034,9 @@ class PlayScreenState extends State<PlayScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           backgroundColor: isPrimary ? green : card,
           foregroundColor: isPrimary ? bg : Colors.white,
-          elevation: isPrimary ? 8 : 0,
+          disabledBackgroundColor: isPrimary ? green.withOpacity(0.3) : card.withOpacity(0.5),
+          disabledForegroundColor: isPrimary ? bg.withOpacity(0.5) : Colors.white54,
+          elevation: isPrimary && onTap != null ? 8 : 0,
           shadowColor: green.withOpacity(0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -975,43 +1048,4 @@ class PlayScreenState extends State<PlayScreen> {
       ),
     );
   }
-}
-
-class _ArrowPainter extends CustomPainter {
-  final Color color;
-  final Color borderColor;
-
-  _ArrowPainter({required this.color, required this.borderColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    path.moveTo(size.width / 2, size.height); // bottom-center
-    path.lineTo(0, 0); // top-left
-    path.lineTo(size.width, 0); // top-right
-    path.close();
-
-    canvas.drawPath(path, paint);
-
-    // Draw the V border so the pointer is clearly visible against the dark background!
-    final borderPaint = Paint()
-      ..color = borderColor
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-
-    final borderPath = Path();
-    borderPath.moveTo(0, 0); // top-left
-    borderPath.lineTo(size.width / 2, size.height); // down to bottom-center
-    borderPath.lineTo(size.width, 0); // back up to top-right
-
-    canvas.drawPath(borderPath, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ArrowPainter oldDelegate) => 
-      color != oldDelegate.color || borderColor != oldDelegate.borderColor;
 }
