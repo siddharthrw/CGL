@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'theme.dart';
 
 class PlayScreen extends StatefulWidget {
@@ -51,6 +50,7 @@ class PlayScreenState extends State<PlayScreen> {
 
   final GlobalKey _speedBtnKey = GlobalKey();
   bool _speedTutorialShown = false;
+  OverlayEntry? _speedTutorialOverlay;
 
   @override
   void initState() {
@@ -65,44 +65,59 @@ class PlayScreenState extends State<PlayScreen> {
 
   Future<void> _checkSpeedTutorial() async {
     final prefs = await SharedPreferences.getInstance();
-    _speedTutorialShown = prefs.getBool('speedTutorialShown') ?? false;
+    // Force reset for testing so the tooltip shows up again immediately!
+    await prefs.setBool('speedTutorialShown', false);
+    _speedTutorialShown = false;
   }
 
   void _showSpeedTutorial() {
-    if (_speedTutorialShown) return;
-    
-    TutorialCoachMark(
-      targets: [
-        TargetFocus(
-          identify: "speedBtn",
-          keyTarget: _speedBtnKey,
-          alignSkip: Alignment.topRight,
-          enableOverlayTab: true,
-          contents: [
-            TargetContent(
-              align: ContentAlign.top,
-              builder: (context, controller) {
-                return const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Speed Control", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20.0)),
-                    SizedBox(height: 10.0),
-                    Text("Press here to change speed and hold for 2x", style: TextStyle(color: Colors.white)),
-                  ],
-                );
-              },
-            ),
-          ],
-        )
-      ],
-      colorShadow: Colors.black,
-      textSkip: "GOT IT",
-      paddingFocus: 10,
-      opacityShadow: 0.8,
-      onFinish: _markSpeedTutorialShown,
-      onSkip: () { _markSpeedTutorialShown(); return true; },
-    ).show(context: context);
+    if (_speedTutorialShown || _speedTutorialOverlay != null || !mounted) return;
+
+    final RenderBox? renderBox = _speedBtnKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final size = renderBox.size;
+    final position = renderBox.localToGlobal(Offset.zero);
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    final btnCenterRight = screenWidth - (position.dx + size.width / 2);
+    final tooltipRight = btnCenterRight - 26; // Aligns the right edge so the arrow (26px from right) hits button center
+    final btnTopFromBottom = screenHeight - position.dy;
+
+    _speedTutorialOverlay = OverlayEntry(
+      builder: (context) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _hideSpeedTutorial,
+          child: Stack(
+            children: [
+              Positioned(
+                right: tooltipRight,
+                bottom: btnTopFromBottom + 4, // Exactly 4px above the top of the button
+                child: IgnorePointer(child: _buildTutorialTooltip()),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_speedTutorialOverlay!);
+
+    // Auto-hide after 5 seconds
+    Future.delayed(const Duration(seconds: 5), _hideSpeedTutorial);
+  }
+
+  void _hideSpeedTutorial() {
+    if (_speedTutorialOverlay != null) {
+      _speedTutorialOverlay!.remove();
+      _speedTutorialOverlay = null;
+      if (!_speedTutorialShown) {
+        _markSpeedTutorialShown();
+      }
+    }
   }
 
   void _markSpeedTutorialShown() {
@@ -110,6 +125,52 @@ class PlayScreenState extends State<PlayScreen> {
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('speedTutorialShown', true);
     });
+  }
+
+  Widget _buildTutorialTooltip() {
+    return Material(
+      color: Colors.transparent,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            width: 180, // Constrains width so it wraps text and fits nicely on screen
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: card,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: green.withOpacity(0.5)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: const Text(
+              "Change speed by tapping or holding!",
+              style: TextStyle(color: Colors.white, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(0, -1), // Shift slightly up to merge seamlessly with the green box border
+            child: Container(
+              margin: const EdgeInsets.only(right: 18), // Shifts arrow leftwards to align with button center
+              child: CustomPaint(
+                painter: _ArrowPainter(
+                  color: card,
+                  borderColor: green.withOpacity(0.5),
+                ),
+                size: const Size(16, 8),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
   }
 
   Future<void> _loadHighScore() async {
@@ -295,11 +356,13 @@ class PlayScreenState extends State<PlayScreen> {
   Future<void> _resetHighScore() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('highScore', 0);
+    await prefs.setBool('speedTutorialShown', false);
+    _speedTutorialShown = false;
     if (mounted) {
       setState(() => _highScore = 0);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("High Score Reset!"),
+          content: Text("High Score & Tutorial Reset!"),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -775,4 +838,43 @@ class PlayScreenState extends State<PlayScreen> {
       ),
     );
   }
+}
+
+class _ArrowPainter extends CustomPainter {
+  final Color color;
+  final Color borderColor;
+
+  _ArrowPainter({required this.color, required this.borderColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(size.width / 2, size.height); // bottom-center
+    path.lineTo(0, 0); // top-left
+    path.lineTo(size.width, 0); // top-right
+    path.close();
+
+    canvas.drawPath(path, paint);
+
+    // Draw the V border so the pointer is clearly visible against the dark background!
+    final borderPaint = Paint()
+      ..color = borderColor
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final borderPath = Path();
+    borderPath.moveTo(0, 0); // top-left
+    borderPath.lineTo(size.width / 2, size.height); // down to bottom-center
+    borderPath.lineTo(size.width, 0); // back up to top-right
+
+    canvas.drawPath(borderPath, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArrowPainter oldDelegate) => 
+      color != oldDelegate.color || borderColor != oldDelegate.borderColor;
 }
