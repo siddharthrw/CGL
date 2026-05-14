@@ -160,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-enum RuleMode { easy, medium, hard, custom }
+enum RuleMode { standard, custom }
 
 class _RuleLabSheet extends StatefulWidget {
   final int initialBirth;
@@ -196,11 +196,7 @@ class _RuleLabSheetState extends State<_RuleLabSheet> {
 
   void _determineMode() {
     if (_b == 3 && _sMin == 2 && _sMax == 3) {
-      _mode = RuleMode.easy;
-    } else if (_b == 3 && _sMin == 3 && _sMax == 3) {
-      _mode = RuleMode.medium;
-    } else if (_b == 4 && _sMin == 4 && _sMax == 4) {
-      _mode = RuleMode.hard;
+      _mode = RuleMode.standard;
     } else {
       _mode = RuleMode.custom;
     }
@@ -209,12 +205,8 @@ class _RuleLabSheetState extends State<_RuleLabSheet> {
   void _setMode(RuleMode m) {
     setState(() {
       _mode = m;
-      if (m == RuleMode.easy) {
+      if (m == RuleMode.standard) {
         _b = 3; _sMin = 2; _sMax = 3;
-      } else if (m == RuleMode.medium) {
-        _b = 3; _sMin = 3; _sMax = 3;
-      } else if (m == RuleMode.hard) {
-        _b = 4; _sMin = 4; _sMax = 4;
       }
     });
   }
@@ -271,9 +263,7 @@ class _RuleLabSheetState extends State<_RuleLabSheet> {
           children: [
             const Text("RULE LAB", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
-            _buildModeCard(RuleMode.easy, "Easy (Standard)", "Birth: 3 cells | Survive: 2-3 cells\nPerfect balance. You can easily reach a stable state."),
-            _buildModeCard(RuleMode.medium, "Medium", "Birth: 3 cells | Survive: 3 cells\nCells become empty easily. You will lose about 60% of the time."),
-            _buildModeCard(RuleMode.hard, "Hard", "Birth: 4 cells | Survive: 4 cells\nHarsh environment. You will lose almost every time."),
+            _buildModeCard(RuleMode.standard, "Standard", "Birth: 3 cells | Survive: 2-3 cells\nPerfect balance. You can easily reach a stable state."),
             _buildModeCard(RuleMode.custom, "Custom", "Set your own laws of physics."),
             
             if (_mode == RuleMode.custom) ...[

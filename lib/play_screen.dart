@@ -72,7 +72,7 @@ class PlayScreenState extends State<PlayScreen> {
     setState(() {
       _showOverlay = true;
     });
-    Future.delayed(const Duration(milliseconds: 2500), () {
+    Future.delayed(const Duration(milliseconds: 3500), () {
       if (mounted) {
         setState(() => _showOverlay = false);
       }
@@ -373,7 +373,7 @@ class PlayScreenState extends State<PlayScreen> {
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 56,
+                    height: 76,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
@@ -529,10 +529,14 @@ class PlayScreenState extends State<PlayScreen> {
                                                   style: TextStyle(color: isWin ? green : Colors.redAccent, fontSize: 40, fontWeight: FontWeight.w200, letterSpacing: 10),
                                                 ),
                                                 const SizedBox(height: 16),
-                                                const Text(
-                                                  "Try to keep more cells alive\nto get a better highscore!",
+                                                Text(
+                                                  isWin && growthMultiplier >= 2.0
+                                                      ? "Excellent!"
+                                                      : isWin && growthMultiplier >= 1.0
+                                                          ? "Great Job! Keep Going!"
+                                                          : "Try to keep more cells alive\nto get a better highscore!",
                                                   textAlign: TextAlign.center,
-                                                  style: TextStyle(color: Colors.white70, fontSize: 14, fontStyle: FontStyle.italic, height: 1.4),
+                                                  style: const TextStyle(color: Colors.white70, fontSize: 14, fontStyle: FontStyle.italic, height: 1.4),
                                                 ),
                                               ],
                                             ),
