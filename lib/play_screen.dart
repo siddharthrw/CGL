@@ -46,6 +46,7 @@ class PlayScreenState extends State<PlayScreen> {
   bool _isSpeedHeld = false; // For holding
   int _winCount = 0;
   bool _showLevelPopup = false;
+  int _initialCellsCount = 0;
 
   int _highScore = 0;
 
@@ -112,6 +113,7 @@ class PlayScreenState extends State<PlayScreen> {
       });
       return;
     }
+    _initialCellsCount = aliveInit;
 
     history.clear();
     history.add(_gridToString(grid));
@@ -165,7 +167,7 @@ class PlayScreenState extends State<PlayScreen> {
         pause();
         setState(() {
           gameEndTitle = "Your pattern failed";
-          gameEndMessage = "All cells became empty after $generation generations.";
+          gameEndMessage = "Started with $_initialCellsCount cells, but all died after $generation generations.";
           isWin = false;
         });
         _triggerOverlay();
@@ -183,7 +185,7 @@ class PlayScreenState extends State<PlayScreen> {
             });
           }
           gameEndTitle = "Your pattern survived with $aliveCount live cells";
-          gameEndMessage = "The pattern stabilized after $generation generations.";
+          gameEndMessage = "Started with $_initialCellsCount cells. Stabilized after $generation generations.";
           isWin = true;
         });
         _triggerOverlay();
@@ -203,7 +205,7 @@ class PlayScreenState extends State<PlayScreen> {
               });
             }
             gameEndTitle = "Your pattern is looping with $aliveCount live cells";
-            gameEndMessage = "The pattern entered an endless loop after $generation generations.";
+            gameEndMessage = "Started with $_initialCellsCount cells. Entered a loop after $generation generations.";
             isWin = true;
           });
           _triggerOverlay();
@@ -235,6 +237,7 @@ class PlayScreenState extends State<PlayScreen> {
       isWin = false;
       _showOverlay = false;
       history.clear();
+      _initialCellsCount = 0;
 
       grid = List.generate(
         size,
@@ -310,6 +313,10 @@ class PlayScreenState extends State<PlayScreen> {
     }
     String status = aliveCount == 0 ? "All cells empty" : "Active";
 
+    double growthMultiplier = _initialCellsCount > 0 ? (aliveCount / _initialCellsCount) : 0.0;
+    Color growthColor = growthMultiplier >= 2.0 ? Colors.amber : (growthMultiplier >= 1.0 ? green : Colors.redAccent);
+    IconData growthIcon = growthMultiplier >= 2.0 ? Icons.local_fire_department : (growthMultiplier >= 1.0 ? Icons.trending_up : Icons.trending_down);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -371,12 +378,40 @@ class PlayScreenState extends State<PlayScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          "Status: $status   •   Live cells: $aliveCount",
-                          style: const TextStyle(
-                              color: green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              generation == 0 
+                                  ? "Live cells drawn: $aliveCount"
+                                  : "Started: $_initialCellsCount   •   Current: $aliveCount",
+                              style: const TextStyle(
+                                  color: green,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14),
+                            ),
+                            if (generation > 0 && _initialCellsCount > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: growthColor.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: growthColor.withOpacity(0.5)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(growthIcon, color: growthColor, size: 14),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${growthMultiplier.toStringAsFixed(1)}x",
+                                      style: TextStyle(color: growthColor, fontWeight: FontWeight.bold, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         if (gameEndMessage != null) ...[
                           const SizedBox(height: 4),
@@ -547,10 +582,29 @@ class PlayScreenState extends State<PlayScreen> {
                                 ),
                               ),
                             )
-                          : const Text(
-                              "Draw cells on the grid and press Play!",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
+                          : const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Draw your starting cells & press Play!",
+                                  style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.egg_alt, color: green, size: 14),
+                                    SizedBox(width: 4),
+                                    Text("Start Small", style: TextStyle(color: green, fontSize: 12, fontWeight: FontWeight.bold)),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.arrow_forward, color: Colors.grey, size: 12),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.all_out, color: Colors.amber, size: 14),
+                                    SizedBox(width: 4),
+                                    Text("Grow Huge", style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ],
                             ),
                     ),
                   ),
