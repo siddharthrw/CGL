@@ -366,7 +366,7 @@ class PlayScreenState extends State<PlayScreen> {
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 72,
+                    height: 56,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
@@ -385,12 +385,6 @@ class PlayScreenState extends State<PlayScreen> {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                                 color: Colors.white70, fontSize: 13),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            "Try to keep more cells alive at the end!",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white54, fontSize: 12, fontStyle: FontStyle.italic),
                           ),
                         ],
                       ],
@@ -486,7 +480,7 @@ class PlayScreenState extends State<PlayScreen> {
                                         child: BackdropFilter(
                                           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 40),
+                                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                                             decoration: BoxDecoration(
                                               color: Colors.white.withOpacity(0.02), // Extremely subtle tint
                                               borderRadius: BorderRadius.circular(30),
@@ -498,6 +492,12 @@ class PlayScreenState extends State<PlayScreen> {
                                                 Text(
                                                   isWin ? "WIN" : "LOSE",
                                                   style: TextStyle(color: isWin ? green : Colors.redAccent, fontSize: 40, fontWeight: FontWeight.w200, letterSpacing: 10),
+                                                ),
+                                                const SizedBox(height: 16),
+                                                const Text(
+                                                  "Try to keep more cells alive\nto get a better highscore!",
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(color: Colors.white70, fontSize: 14, fontStyle: FontStyle.italic, height: 1.4),
                                                 ),
                                               ],
                                             ),
