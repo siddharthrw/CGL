@@ -382,14 +382,16 @@ class PlayScreenState extends State<PlayScreen> {
        final cellSize = gridSize / size;
        final cellPaintAlive = Paint()..color = green;
        final cellPaintDead = Paint()..color = Colors.white.withOpacity(0.05);
-       final borderPaint = Paint()..color = Colors.white.withOpacity(0.1)..style = PaintingStyle.stroke..strokeWidth = 1;
+       
+       final borderPaintDead = Paint()..color = Colors.white.withOpacity(0.15)..style = PaintingStyle.stroke..strokeWidth = 1.5;
+       final borderPaintAlive = Paint()..color = green.withOpacity(0.8)..style = PaintingStyle.stroke..strokeWidth = 1.5;
 
        for (int x = 0; x < size; x++) {
          for (int y = 0; y < size; y++) {
            final rect = Rect.fromLTWH(offset.dx + y * cellSize, offset.dy + x * cellSize, cellSize, cellSize);
            final isAlive = gridData[x][y] == 1;
            c.drawRect(rect, isAlive ? cellPaintAlive : cellPaintDead);
-           if (!isAlive) c.drawRect(rect, borderPaint); 
+           c.drawRect(rect, isAlive ? borderPaintAlive : borderPaintDead);
          }
        }
     }
@@ -795,14 +797,17 @@ class PlayScreenState extends State<PlayScreen> {
                                       ),
                                     ),
                                     child: Center(
-                                      child: Text(
-                                        gameEndTitle!,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: isWin ? green : Colors.redAccent,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          letterSpacing: 1.1,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          gameEndTitle!,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: isWin ? green : Colors.redAccent,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            letterSpacing: 1.1,
+                                          ),
                                         ),
                                       ),
                                     ),
