@@ -32,7 +32,7 @@ class PlayScreen extends StatefulWidget {
   State<PlayScreen> createState() => PlayScreenState();
 }
 
-class PlayScreenState extends State<PlayScreen> {
+class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMixin {
   final size = 20;
   late List<List<int>> grid;
   late List<List<int>> _initialGridSnapshot;
@@ -56,9 +56,15 @@ class PlayScreenState extends State<PlayScreen> {
   final GlobalKey _statusAreaKey = GlobalKey();
   int _tutorialStep = -1;
 
+  late AnimationController _pulseController;
+
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
     grid = List.generate(
       size,
       (_) => List.filled(size, 0),
@@ -70,6 +76,7 @@ class PlayScreenState extends State<PlayScreen> {
 
   @override
   void dispose() {
+    _pulseController.dispose();
     timer?.cancel();
     super.dispose();
   }
@@ -637,6 +644,12 @@ class PlayScreenState extends State<PlayScreen> {
                                       int row = index ~/ size;
                                       int col = index % size;
                                       bool alive = grid[row][col] == 1;
+                                      bool isTutorialTarget = _tutorialStep == 0 && !alive && (
+                                        (row == 2 && col == 3) ||
+                                        (row == 3 && col == 4) ||
+                                        (row == 4 && col >= 2 && col <= 4)
+                                      );
+
                                       return GestureDetector(
                                         behavior: HitTestBehavior.opaque,
                                         onTap: () {
@@ -650,23 +663,51 @@ class PlayScreenState extends State<PlayScreen> {
                                             history.clear();
                                           });
                                         },
-                                        child: AnimatedContainer(
-                                          duration: const Duration(milliseconds: 250),
-                                          margin: const EdgeInsets.all(1.5),
-                                          decoration: BoxDecoration(
-                                            color: alive ? green : Colors.white.withOpacity(0.05),
-                                            border: Border.all(color: alive ? green : Colors.white.withOpacity(0.1)),
-                                            borderRadius: BorderRadius.circular(4),
-                                            boxShadow: alive
-                                                ? [
-                                                    BoxShadow(
-                                                      color: green.withOpacity(.5),
-                                                      blurRadius: 8,
-                                                    )
-                                                  ]
-                                                : [],
-                                          ),
-                                        ),
+                                        child: isTutorialTarget
+                                            ? AnimatedBuilder(
+                                                animation: _pulseController,
+                                                builder: (context, child) {
+                                                  double val = _pulseController.value;
+                                                  return Transform.scale(
+                                                    scale: 1.0 + (val * 0.25),
+                                                    child: Container(
+                                                      margin: const EdgeInsets.all(1.5),
+                                                      decoration: BoxDecoration(
+                                                        color: green.withOpacity(0.2 + val * 0.6),
+                                                        border: Border.all(
+                                                          color: green.withOpacity(0.5 + val * 0.5),
+                                                          width: 1.5 + val * 1.5,
+                                                        ),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: green.withOpacity(0.4 + val * 0.6),
+                                                            blurRadius: 8 + val * 15,
+                                                            spreadRadius: val * 6,
+                                                          )
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              )
+                                            : AnimatedContainer(
+                                                duration: const Duration(milliseconds: 250),
+                                                margin: const EdgeInsets.all(1.5),
+                                                decoration: BoxDecoration(
+                                                  color: alive ? green : Colors.white.withOpacity(0.05),
+                                                  border: Border.all(color: alive ? green : Colors.white.withOpacity(0.1)),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  boxShadow: alive
+                                                      ? [
+                                                          BoxShadow(
+                                                            color: green.withOpacity(.5),
+                                                            blurRadius: 8,
+                                                          )
+                                                        ]
+                                                      : [],
+                                                ),
+                                              ),
                                       );
                                     },
                                   ),
@@ -855,11 +896,11 @@ class PlayScreenState extends State<PlayScreen> {
                             boxShadow: _tutorialStep == 2 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
                           ),
                           child: Center(
-                            child: Text((_isSpeedToggled || _isSpeedHeld) ? "2x" : "1x", style: TextStyle(
+                            child: Icon(
+                              Icons.bolt,
                               color: (_isSpeedToggled || _isSpeedHeld) ? bg : Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            )),
+                              size: 28,
+                            ),
                           ),
                         ),
                       ),
@@ -918,10 +959,14 @@ class PlayScreenState extends State<PlayScreen> {
     switch (_tutorialStep) {
       case 0:
         title = "1. Draw Life";
-        desc = "Tap or drag your finger across the grid to draw a starting pattern of 'Live' cells.";
+        desc = "Tap the 5 blinking cells to draw a 'Glider'. This pattern will fly across the grid!";
         showNext = true;
+        bool targetsHit = grid[2][3] == 1 && grid[3][4] == 1 && grid[4][2] == 1 && grid[4][3] == 1 && grid[4][4] == 1;
         int alive = grid.expand((e) => e).where((c) => c == 1).length;
-        nextEnabled = alive > 0;
+        nextEnabled = targetsHit && alive == 5;
+        if (!nextEnabled && alive > 0) {
+          desc = "Tap ONLY the 5 blinking cells. Use the refresh button below to clear if you made a mistake!";
+        }
         isTop = true;
         break;
       case 1:
@@ -932,13 +977,13 @@ class PlayScreenState extends State<PlayScreen> {
         break;
       case 2:
         title = "3. Speed Control";
-        desc = "Simulation running too slow? Tap the glowing '1x' button to toggle 2x speed, or hold it down for a boost!";
+        desc = "Simulation running too slow? Tap the glowing lightning button to toggle 2x speed, or hold it down for a boost!";
         showNext = true; // They can tap next if they don't want to change speed
         isTop = true;
         break;
       case 3:
         title = "4. How to Win";
-        desc = "To win, your pattern must stabilize into a loop or stop changing. If all cells die, you lose! The more your cells multiply, the better your Badge.";
+        desc = "To win, your pattern must stabilize into a loop or stop changing. If all cells die, you lose! The more your cells multiply, the better your Badge:\n\n• Survived (Red): < 1.0x growth\n• Great (Green): 1.0x - 1.9x growth\n• Excellent (Amber): 2.0x+ growth";
         showNext = true;
         isTop = false; // Status area is at top, put dialog at bottom
         break;
