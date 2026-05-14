@@ -23,7 +23,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
   @override
   void initState() {
     super.initState();
-    _startDeathSequence();
+    _startNeighborsSequence();
   }
 
   void _finish() {
@@ -42,18 +42,61 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
 
     if (filled.length == targets.length) {
       allowTap = false;
-      if (step == 1) _playDeathAnimation();
-      else if (step == 2) _playSurvivalAnimation();
-      else if (step == 3) _playOverpopAnimation();
-      else if (step == 4) _playBirthAnimation();
-      else if (step == 5) _playWinLoseAnimation();
+      if (step == 1) _playNeighborsAnimation();
+      else if (step == 2) _playDeathAnimation();
+      else if (step == 3) _playSurvivalAnimation();
+      else if (step == 4) _playOverpopAnimation();
+      else if (step == 5) _playBirthAnimation();
+      else if (step == 6) _playWinLoseAnimation();
     }
   }
 
-  // --- STEP 1: DEATH ---
-  void _startDeathSequence() {
+  // --- STEP 1: NEIGHBORS ---
+  void _startNeighborsSequence() {
     setState(() {
       step = 1;
+      title = "The Grid";
+      subtitle = "Every cell has up to 8 neighbors. Tap the glowing cell to see them.";
+      targets = {44};
+      filled.clear();
+      overrides.clear();
+      allowTap = true;
+    });
+  }
+
+  Future<void> _playNeighborsAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    setState(() => subtitle = "These 8 surrounding cells determine if it lives or dies.");
+
+    List<int> neighbors = [33, 34, 35, 43, 45, 53, 54, 55];
+
+    // Pulse the 8 neighbors in yellow
+    for (int i = 0; i < 2; i++) {
+      setState(() {
+        for (var n in neighbors) overrides[n] = Colors.yellowAccent.withOpacity(0.6);
+      });
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      setState(() => overrides.clear());
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+    }
+
+    // Keep them highlighted for a moment
+    setState(() {
+      for (var n in neighbors) overrides[n] = Colors.yellowAccent.withOpacity(0.6);
+    });
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    _startDeathSequence();
+  }
+
+  // --- STEP 2: DEATH ---
+  void _startDeathSequence() {
+    setState(() {
+      step = 2;
       title = "Rule 1: Isolation";
       subtitle = "Tap the 2 glowing cells to give them life.";
       targets = {44, 45};
@@ -84,10 +127,10 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     _startSurvivalSequence();
   }
 
-  // --- STEP 2: SURVIVAL ---
+  // --- STEP 3: SURVIVAL ---
   void _startSurvivalSequence() {
     setState(() {
-      step = 2;
+      step = 3;
       title = "Rule 2: Balance";
       subtitle = "Tap 4 glowing cells to form a stable community.";
       targets = {44, 45, 54, 55};
@@ -117,10 +160,10 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     _startOverpopSequence();
   }
 
-  // --- STEP 3: OVERPOPULATION ---
+  // --- STEP 4: OVERPOPULATION ---
   void _startOverpopSequence() {
     setState(() {
-      step = 3;
+      step = 4;
       title = "Rule 3: Crowding";
       subtitle = "Tap 5 cells to form a crowded plus (+) shape.";
       targets = {34, 43, 44, 45, 54};
@@ -150,10 +193,10 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     _startBirthSequence();
   }
 
-  // --- STEP 4: BIRTH ---
+  // --- STEP 5: BIRTH ---
   void _startBirthSequence() {
     setState(() {
-      step = 4;
+      step = 5;
       title = "Rule 4: Reproduction";
       subtitle = "Tap 3 cells to form an 'L' shape.";
       targets = {44, 45, 54};
@@ -183,10 +226,10 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     _startWinLoseSequence();
   }
 
-  // --- STEP 5: WIN & LOSE ---
+  // --- STEP 6: WIN & LOSE ---
   void _startWinLoseSequence() {
     setState(() {
-      step = 5;
+      step = 6;
       title = "Winning & Losing";
       subtitle = "Tap 3 cells in a row.";
       targets = {44, 45, 46};
@@ -225,7 +268,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     if (!mounted) return;
     
     setState(() {
-      step = 6;
+      step = 7;
       title = "You're Ready!";
       subtitle = "Go create life!";
     });
@@ -298,7 +341,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
                 ),
               ),
               const Spacer(),
-              if (step == 6)
+              if (step == 7)
                 SizedBox(
                   width: double.infinity,
                   height: 56,
