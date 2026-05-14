@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:ui';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import 'theme.dart';
 
 class PlayScreen extends StatefulWidget {
@@ -33,6 +35,7 @@ class PlayScreen extends StatefulWidget {
 class PlayScreenState extends State<PlayScreen> {
   final size = 20;
   late List<List<int>> grid;
+  late List<List<int>> _initialGridSnapshot;
   Timer? timer;
   int generation = 0;
 
@@ -59,6 +62,7 @@ class PlayScreenState extends State<PlayScreen> {
       size,
       (_) => List.filled(size, 0),
     );
+    _initialGridSnapshot = List.generate(size, (_) => List.filled(size, 0));
     _loadHighScore();
     _checkSpeedTutorial();
   }
@@ -217,6 +221,7 @@ class PlayScreenState extends State<PlayScreen> {
       return;
     }
     _initialCellsCount = aliveInit;
+    _initialGridSnapshot = List.generate(size, (x) => List.from(grid[x]));
 
     history.clear();
     history.add(_gridToString(grid));
@@ -330,6 +335,108 @@ class PlayScreenState extends State<PlayScreen> {
     timer?.cancel();
   }
 
+  Future<void> _shareStats(int aliveCount, double growthMultiplier) async {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    const width = 800.0;
+    const height = 900.0;
+    
+    // Background
+    final bgPaint = Paint()..color = bg;
+    canvas.drawRect(const Rect.fromLTWH(0, 0, width, height), bgPaint);
+
+    // Card Background
+    final cardPaint = Paint()..color = card;
+    final rrect = RRect.fromLTRBR(40, 40, width - 40, height - 40, const Radius.circular(30));
+    canvas.drawRRect(rrect, cardPaint);
+    
+    // Border for Card
+    final cardBorderPaint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawRRect(rrect, cardBorderPaint);
+
+    // Title
+    const titleSpan = TextSpan(
+      text: "LIFE LAB",
+      style: TextStyle(color: green, fontSize: 50, fontWeight: FontWeight.bold, letterSpacing: 4),
+    );
+    final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr)..layout();
+    titlePainter.paint(canvas, Offset((width - titlePainter.width) / 2, 80));
+
+    // Result Title
+    final resultSpan = TextSpan(
+      text: isWin ? "SURVIVED" : "FAILED",
+      style: TextStyle(color: isWin ? green : Colors.redAccent, fontSize: 32, fontWeight: FontWeight.w200, letterSpacing: 8),
+    );
+    final resultPainter = TextPainter(text: resultSpan, textDirection: TextDirection.ltr)..layout();
+    resultPainter.paint(canvas, Offset((width - resultPainter.width) / 2, 140));
+
+    // Draw Grids Function
+    void drawGrid(Canvas c, Offset offset, double gridSize, List<List<int>> gridData, String label) {
+       final labelSpan = TextSpan(text: label, style: const TextStyle(color: Colors.white70, fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2));
+       final labelPainter = TextPainter(text: labelSpan, textDirection: TextDirection.ltr)..layout();
+       labelPainter.paint(c, Offset(offset.dx + (gridSize - labelPainter.width) / 2, offset.dy - 35));
+
+       final cellSize = gridSize / size;
+       final cellPaintAlive = Paint()..color = green;
+       final cellPaintDead = Paint()..color = Colors.white.withOpacity(0.05);
+       final borderPaint = Paint()..color = Colors.white.withOpacity(0.1)..style = PaintingStyle.stroke..strokeWidth = 1;
+
+       for (int x = 0; x < size; x++) {
+         for (int y = 0; y < size; y++) {
+           final rect = Rect.fromLTWH(offset.dx + y * cellSize, offset.dy + x * cellSize, cellSize, cellSize);
+           final isAlive = gridData[x][y] == 1;
+           c.drawRect(rect, isAlive ? cellPaintAlive : cellPaintDead);
+           if (!isAlive) c.drawRect(rect, borderPaint); 
+         }
+       }
+    }
+
+    // Grids side by side
+    const gridRenderSize = 260.0;
+    drawGrid(canvas, const Offset(80, 240), gridRenderSize, _initialGridSnapshot, "INITIAL");
+    drawGrid(canvas, const Offset(width - 80 - gridRenderSize, 240), gridRenderSize, grid, "FINAL");
+
+    // Stats Box
+    String badge = growthMultiplier >= 2.0 ? "Excellent" : (growthMultiplier >= 1.0 ? "Great" : "Survived");
+    if (!isWin) badge = "Extinct";
+
+    final statsText = "Start Cells: $_initialCellsCount\n"
+                      "Final Cells: $aliveCount\n"
+                      "Generations: $generation\n"
+                      "Growth: ${growthMultiplier.toStringAsFixed(1)}x\n"
+                      "Badge: $badge";
+    
+    final statsSpan = TextSpan(
+      text: statsText,
+      style: const TextStyle(color: Colors.white, fontSize: 28, height: 1.6, fontWeight: FontWeight.w500),
+    );
+    final statsPainter = TextPainter(text: statsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout();
+    statsPainter.paint(canvas, Offset((width - statsPainter.width) / 2, 560));
+
+    // Footer
+    const footerSpan = TextSpan(
+      text: "randomwalk.ai/lifelab",
+      style: TextStyle(color: Colors.grey, fontSize: 18, letterSpacing: 1.2),
+    );
+    final footerPainter = TextPainter(text: footerSpan, textDirection: TextDirection.ltr)..layout();
+    footerPainter.paint(canvas, Offset((width - footerPainter.width) / 2, height - 100));
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final byteData = await img.toByteData(format: ImageByteFormat.png);
+    if (byteData == null) return;
+
+    final bytes = byteData.buffer.asUint8List();
+
+    await Share.shareXFiles(
+      [XFile.fromData(bytes, mimeType: 'image/png', name: 'life_lab_stats.png')],
+      text: 'I reached generation $generation in Life Lab with $aliveCount cells! Can you beat my pattern?',
+    );
+  }
+
   void clear({bool andResetHighScore = false}) {
     timer?.cancel();
 
@@ -350,6 +457,7 @@ class PlayScreenState extends State<PlayScreen> {
         size,
         (_) => List.filled(size, 0),
       );
+      _initialGridSnapshot = List.generate(size, (_) => List.filled(size, 0));
     });
   }
 
@@ -669,33 +777,57 @@ class PlayScreenState extends State<PlayScreen> {
                     height: 56,
                     child: Center(
                       child: gameEndTitle != null
-                          ? Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: isWin
-                                    ? green.withOpacity(0.1)
-                                    : Colors.redAccent.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isWin
-                                      ? green.withOpacity(0.3)
-                                      : Colors.redAccent.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  gameEndTitle!,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: isWin ? green : Colors.redAccent,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    letterSpacing: 1.1,
+                          ? Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12, horizontal: 16),
+                                    decoration: BoxDecoration(
+                                      color: isWin
+                                          ? green.withOpacity(0.1)
+                                          : Colors.redAccent.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isWin
+                                            ? green.withOpacity(0.3)
+                                            : Colors.redAccent.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        gameEndTitle!,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: isWin ? green : Colors.redAccent,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                          letterSpacing: 1.1,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                                if (isWin) ...[
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    height: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () => _shareStats(aliveCount, growthMultiplier),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: green.withOpacity(0.1),
+                                        foregroundColor: green,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          side: BorderSide(color: green.withOpacity(0.3)),
+                                        ),
+                                      ),
+                                      child: const Icon(Icons.share),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             )
                           : const Column(
                               mainAxisAlignment: MainAxisAlignment.center,
