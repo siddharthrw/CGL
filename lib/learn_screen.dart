@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'theme.dart';
 
 class LearnScreen extends StatelessWidget {
@@ -77,14 +79,34 @@ class LearnScreen extends StatelessWidget {
           faqItem("What are Gliders?", "Gliders are special patterns of cells that move across the grid infinitely. They 'fly' diagonally across the board. Try drawing a small asymmetrical shape and see if it moves!"),
           faqItem("Can I change the rules?", "Absolutely! Tap the 'Rule Lab' icon (the filter icon) at the top of the Play screen to experiment. Changing the required neighbors for birth or survival creates entirely new and bizarre universes."),
           const SizedBox(height: 40),
-          const Center(
-            child: Text(
-              "Built by Randomwalk.ai",
-              style: TextStyle(
-                color: Colors.white30,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
+          Center(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  color: Colors.white30,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+                children: [
+                  const TextSpan(text: "Built by "),
+                  TextSpan(
+                    text: "Randomwalk.ai",
+                    style: const TextStyle(
+                      color: Colors.blueAccent,
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () async {
+                        final Uri url = Uri.parse('https://randomwalk.ai/');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        } else {
+                          debugPrint('Could not launch $url');
+                        }
+                      },
+                  ),
+                ],
               ),
             ),
           ),

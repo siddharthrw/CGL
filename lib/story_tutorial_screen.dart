@@ -261,12 +261,29 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     }
 
     setState(() {
-      filled.clear(); overrides.clear();
+      filled.clear(); 
+      overrides.clear();
+      targets.clear(); // Removes the glowing hints so the grid is truly empty
       subtitle = "But if all cells die and the grid becomes completely empty, you LOSE.";
     });
-    await Future.delayed(const Duration(seconds: 4));
-    if (!mounted) return;
     
+    // Blink the empty grid twice to draw attention to it
+    for (int i = 0; i < 2; i++) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (!mounted) return;
+      setState(() {
+        for (int j = 0; j < size * size; j++) {
+          overrides[j] = Colors.redAccent.withOpacity(0.15); // Soft red flash
+        }
+      });
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (!mounted) return;
+      setState(() => overrides.clear());
+    }
+
+    await Future.delayed(const Duration(seconds: 1));
+    if (!mounted) return;
+
     setState(() {
       step = 7;
       title = "You're Ready!";
