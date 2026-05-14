@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'theme.dart';
 
 class PlayScreen extends StatefulWidget {
@@ -44,11 +45,12 @@ class PlayScreenState extends State<PlayScreen> {
 
   bool _isSpeedToggled = false; // For tapping
   bool _isSpeedHeld = false; // For holding
-  int _winCount = 0;
-  bool _showLevelPopup = false;
   int _initialCellsCount = 0;
 
   int _highScore = 0;
+
+  final GlobalKey _speedBtnKey = GlobalKey();
+  bool _speedTutorialShown = false;
 
   @override
   void initState() {
@@ -58,6 +60,56 @@ class PlayScreenState extends State<PlayScreen> {
       (_) => List.filled(size, 0),
     );
     _loadHighScore();
+    _checkSpeedTutorial();
+  }
+
+  Future<void> _checkSpeedTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    _speedTutorialShown = prefs.getBool('speedTutorialShown') ?? false;
+  }
+
+  void _showSpeedTutorial() {
+    if (_speedTutorialShown) return;
+    
+    TutorialCoachMark(
+      targets: [
+        TargetFocus(
+          identify: "speedBtn",
+          keyTarget: _speedBtnKey,
+          alignSkip: Alignment.topRight,
+          enableOverlayTab: true,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (context, controller) {
+                return const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Speed Control", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20.0)),
+                    SizedBox(height: 10.0),
+                    Text("Press here to change speed and hold for 2x", style: TextStyle(color: Colors.white)),
+                  ],
+                );
+              },
+            ),
+          ],
+        )
+      ],
+      colorShadow: Colors.black,
+      textSkip: "GOT IT",
+      paddingFocus: 10,
+      opacityShadow: 0.8,
+      onFinish: _markSpeedTutorialShown,
+      onSkip: () { _markSpeedTutorialShown(); return true; },
+    ).show(context: context);
+  }
+
+  void _markSpeedTutorialShown() {
+    _speedTutorialShown = true;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('speedTutorialShown', true);
+    });
   }
 
   Future<void> _loadHighScore() async {
@@ -77,16 +129,6 @@ class PlayScreenState extends State<PlayScreen> {
         setState(() => _showOverlay = false);
       }
     });
-  }
-
-  void _handleWin() {
-    _winCount++;
-    if (_winCount == 2) {
-      _showLevelPopup = true;
-      Future.delayed(const Duration(seconds: 6), () {
-        if (mounted) setState(() => _showLevelPopup = false);
-      });
-    }
   }
 
   void start() {
@@ -119,6 +161,12 @@ class PlayScreenState extends State<PlayScreen> {
     history.add(_gridToString(grid));
 
     _setTimer();
+    
+    if (!_speedTutorialShown) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _showSpeedTutorial();
+      });
+    }
   }
 
   void _setTimer() {
@@ -189,7 +237,6 @@ class PlayScreenState extends State<PlayScreen> {
           isWin = true;
         });
         _triggerOverlay();
-        _handleWin();
       }
     } else {
       if (isOscillating) {
@@ -209,7 +256,6 @@ class PlayScreenState extends State<PlayScreen> {
             isWin = true;
           });
           _triggerOverlay();
-          _handleWin();
         }
       }
       history.add(nextStr);
@@ -353,7 +399,7 @@ class PlayScreenState extends State<PlayScreen> {
                           const SizedBox(width: 8),
                           IconButton(
                             key: widget.ruleLabBtnKey,
-                                icon: const Icon(Icons.filter_list, color: green),
+                            icon: const Icon(Icons.tune, color: green),
                             onPressed: widget.onRuleLabTap,
                             tooltip: "Experiment with Rules",
                           ),
@@ -442,6 +488,7 @@ class PlayScreenState extends State<PlayScreen> {
                               children: [
                                 GestureDetector(
                                   onPanUpdate: (details) {
+                                    if (timer != null && timer!.isActive) return;
                                     int col = (details.localPosition.dx / cellWidth).floor();
                                     int row = (details.localPosition.dy / cellWidth).floor();
                                     if (row >= 0 && row < size && col >= 0 && col < size) {
@@ -471,6 +518,7 @@ class PlayScreenState extends State<PlayScreen> {
                                       return GestureDetector(
                                         behavior: HitTestBehavior.opaque,
                                         onTap: () {
+                                          if (timer != null && timer!.isActive) return;
                                           setState(() {
                                             grid[row][col] = 1 - grid[row][col];
                                             gameEndTitle = null;
@@ -639,6 +687,7 @@ class PlayScreenState extends State<PlayScreen> {
                           _updateSpeed();
                         },
                         child: AnimatedContainer(
+                          key: _speedBtnKey,
                           duration: const Duration(milliseconds: 150),
                           height: 52,
                           width: 52,
@@ -685,46 +734,6 @@ class PlayScreenState extends State<PlayScreen> {
             ),
           ],
         ),
-        if (_showLevelPopup)
-          Positioned(
-            top: 45,
-            right: 0,
-            child: Material(
-              color: Colors.transparent,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(right: 78),
-                    child: Icon(Icons.arrow_drop_up, color: green, size: 30),
-                  ),
-                  Transform.translate(
-                    offset: const Offset(0, -10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: green.withOpacity(0.5)),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 4))],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text("Change the difficulty ?", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 16),
-                          GestureDetector(
-                            onTap: () => setState(() => _showLevelPopup = false),
-                            child: const Icon(Icons.close, color: Colors.grey, size: 18),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
       ],
     ),
   ),

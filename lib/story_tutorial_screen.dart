@@ -9,7 +9,7 @@ class StoryTutorialScreen extends StatefulWidget {
   State<StoryTutorialScreen> createState() => _StoryTutorialScreenState();
 }
 
-class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
+class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTickerProviderStateMixin {
   final int size = 10;
   int step = 1;
   String title = "";
@@ -19,11 +19,22 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
   Set<int> filled = {};
   Map<int, Color> overrides = {};
   bool allowTap = false;
+  bool _showNextButton = false;
+  bool _showSwipePrompt = false;
+  late AnimationController _swipeController;
 
   @override
   void initState() {
     super.initState();
+    _swipeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
     _startNeighborsSequence();
+  }
+
+  @override
+  void dispose() {
+    // It's important to dispose of controllers to free up resources.
+    _swipeController.dispose();
+    super.dispose();
   }
 
   void _finish() {
@@ -48,6 +59,25 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
       else if (step == 4) _playOverpopAnimation();
       else if (step == 5) _playBirthAnimation();
       else if (step == 6) _playWinLoseAnimation();
+    }
+  }
+
+  void _onNextPressed() {
+    if (!_showNextButton) return;
+    setState(() {
+      _showNextButton = false;
+    });
+    if (step == 1) _startDeathSequence();
+    else if (step == 2) _startSurvivalSequence();
+    else if (step == 3) _startOverpopSequence();
+    else if (step == 4) _startBirthSequence();
+    else if (step == 5) _startWinLoseSequence();
+    else if (step == 6) {
+      setState(() {
+        step = 7;
+        title = "You're Ready!";
+        subtitle = "Go create life!";
+      });
     }
   }
 
@@ -90,7 +120,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
-    _startDeathSequence();
+    setState(() => _showNextButton = true);
   }
 
   // --- STEP 2: DEATH ---
@@ -124,7 +154,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     setState(() { filled.clear(); overrides.clear(); });
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-    _startSurvivalSequence();
+    setState(() => _showNextButton = true);
   }
 
   // --- STEP 3: SURVIVAL ---
@@ -157,7 +187,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     setState(() => overrides.clear());
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-    _startOverpopSequence();
+    setState(() => _showNextButton = true);
   }
 
   // --- STEP 4: OVERPOPULATION ---
@@ -190,7 +220,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     setState(() { filled.remove(44); overrides.clear(); });
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-    _startBirthSequence();
+    setState(() => _showNextButton = true);
   }
 
   // --- STEP 5: BIRTH ---
@@ -223,7 +253,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     setState(() { filled.add(55); overrides.clear(); });
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-    _startWinLoseSequence();
+    setState(() => _showNextButton = true);
   }
 
   // --- STEP 6: WIN & LOSE ---
@@ -284,11 +314,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
     await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
 
-    setState(() {
-      step = 7;
-      title = "You're Ready!";
-      subtitle = "Go create life!";
-    });
+    setState(() => _showNextButton = true);
   }
 
   @override
@@ -300,11 +326,11 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           child: Column(
             children: [
-              const Spacer(),
-              Center(
-                child: SizedBox(
-                  width: 300,
-                  height: 300,
+                const Spacer(),
+                Center(
+                  child: SizedBox(
+                    width: 300,
+                    height: 300,
                   child: GridView.builder(
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: size),
@@ -343,46 +369,62 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> {
                   ),
                 ),
               ),
-              const Spacer(),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: green, fontSize: 32, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 80,
-                child: Text(
-                  subtitle,
+                const Spacer(),
+                Text(
+                  title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.5),
+                  style: const TextStyle(color: green, fontSize: 32, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const Spacer(),
-              if (step == 7)
+                const SizedBox(height: 16),
                 SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: _finish,
-                    icon: const Icon(Icons.rocket_launch),
-                    label: const Text("PLAY GAME", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: green,
-                      foregroundColor: bg,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
+                  height: 80,
+                  child: Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.5),
                   ),
-                )
-              else
-                TextButton(
-                  onPressed: _finish,
-                  child: const Text("SKIP TUTORIAL", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                )
-            ],
+                ),
+                const Spacer(),
+                SizedBox(
+                  height: 56,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: _finish,
+                        child: const Text("SKIP TUTORIAL", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                      ),
+                      if (step == 7)
+                        ElevatedButton.icon(
+                          onPressed: _finish,
+                          icon: const Icon(Icons.rocket_launch),
+                          label: const Text("PLAY GAME", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: green,
+                            foregroundColor: bg,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        )
+                      else if (_showNextButton)
+                        ElevatedButton.icon(
+                          onPressed: _onNextPressed,
+                          icon: const Icon(Icons.arrow_forward),
+                          label: const Text("NEXT", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: green,
+                            foregroundColor: bg,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        )
+                      else
+                        const SizedBox(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
     );
   }
 }
