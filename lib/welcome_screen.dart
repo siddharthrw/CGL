@@ -208,7 +208,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             foregroundColor: bg,
                             elevation: 10,
                             shadowColor: green.withOpacity(0.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           child: Text(
                             _isFirstTime ? "START TUTORIAL" : "ENTER GRID",
@@ -249,7 +249,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _isFirstTime ? Colors.white30 : green,
                             side: BorderSide(color: _isFirstTime ? Colors.white12 : green, width: 2),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           child: Text(
                             _isFirstTime ? "ENTER GRID" : "START TUTORIAL",

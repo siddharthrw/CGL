@@ -50,6 +50,7 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
 
   void _onCellTap(int index) {
     if (!allowTap || !targets.contains(index)) return;
+    if (filled.contains(index)) return; // Prevents double-triggering during drag
     
     setState(() {
       filled.add(index);
@@ -66,16 +67,34 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
     }
   }
 
+  void _startSequence(int s) {
+    if (s == 1) _startNeighborsSequence();
+    else if (s == 2) _startDeathSequence();
+    else if (s == 3) _startSurvivalSequence();
+    else if (s == 4) _startOverpopSequence();
+    else if (s == 5) _startBirthSequence();
+    else if (s == 6) _startWinLoseSequence();
+  }
+
   void _onNextPressed() {
     if (!_showNextButton) return;
+    if (step == 6) {
+      _finish();
+      return;
+    }
     setState(() {
       _showNextButton = false;
     });
-    if (step == 1) _startDeathSequence();
-    else if (step == 2) _startSurvivalSequence();
-    else if (step == 3) _startOverpopSequence();
-    else if (step == 4) _startBirthSequence();
-    else if (step == 5) _startWinLoseSequence();
+    _startSequence(step + 1);
+  }
+
+  void _onBackPressed() {
+    if (step > 1) {
+      setState(() {
+        _showNextButton = false;
+      });
+      _startSequence(step - 1);
+    }
   }
 
   // --- STEP 1: NEIGHBORS ---
@@ -320,9 +339,16 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
       backgroundColor: bg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: TextButton(
+                    onPressed: _finish,
+                    child: const Text("SKIP", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                  ),
+                ),
                 const Spacer(),
                 Center(
                   child: SizedBox(
@@ -331,51 +357,70 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        GridView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: size),
-                          itemCount: size * size,
-                          itemBuilder: (context, index) {
-                            bool isTarget = targets.contains(index);
-                            bool isFilled = filled.contains(index);
-                            Color? overrideColor = overrides[index];
-
-                            Color cellColor;
-                            if (overrideColor != null) {
-                              cellColor = overrideColor;
-                            } else if (isFilled) {
-                              cellColor = green;
-                            } else if (isTarget && !isFilled) {
-                              cellColor = green.withOpacity(0.2); // Hint color
-                            } else {
-                              cellColor = Colors.white.withOpacity(0.05); // Empty
+                        GestureDetector(
+                          onPanUpdate: (details) {
+                            if (!allowTap) return;
+                            double cellWidth = 300 / size;
+                            int col = (details.localPosition.dx / cellWidth).floor();
+                            int row = (details.localPosition.dy / cellWidth).floor();
+                            if (row >= 0 && row < size && col >= 0 && col < size) {
+                              int index = row * size + col;
+                              _onCellTap(index);
                             }
-
-                            return GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => _onCellTap(index),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                margin: const EdgeInsets.all(1.5),
-                                decoration: BoxDecoration(
-                                  color: cellColor,
-                                  border: Border.all(color: cellColor == green.withOpacity(0.2) ? green.withOpacity(0.5) : Colors.white.withOpacity(0.1)),
-                                  borderRadius: BorderRadius.circular(4),
-                                  boxShadow: isFilled ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)] : [],
-                                ),
-                              ),
-                            );
                           },
+                          child: GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: size),
+                            itemCount: size * size,
+                            itemBuilder: (context, index) {
+                              bool isTarget = targets.contains(index);
+                              bool isFilled = filled.contains(index);
+                              Color? overrideColor = overrides[index];
+  
+                              Color cellColor;
+                              if (overrideColor != null) {
+                                cellColor = overrideColor;
+                              } else if (isFilled) {
+                                cellColor = green;
+                              } else if (isTarget && !isFilled) {
+                                cellColor = green.withOpacity(0.2); // Hint color
+                              } else {
+                                cellColor = Colors.white.withOpacity(0.05); // Empty
+                              }
+  
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => _onCellTap(index),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  margin: const EdgeInsets.all(1.5),
+                                  decoration: BoxDecoration(
+                                    color: cellColor,
+                                    border: Border.all(color: cellColor == green.withOpacity(0.2) ? green.withOpacity(0.5) : Colors.white.withOpacity(0.1)),
+                                    borderRadius: BorderRadius.circular(4),
+                                    boxShadow: isFilled ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 8)] : [],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                         if (allowTap)
                           Positioned(
                             child: IgnorePointer(
-                              child: SlideTransition(
-                                position: Tween<Offset>(begin: const Offset(0, -0.3), end: const Offset(0, 0.3)).animate(
-                                  CurvedAnimation(parent: _swipeController, curve: Curves.easeInOut),
-                                ),
-                                child: Icon(Icons.touch_app, size: 60, color: Colors.white.withOpacity(0.8)),
-                              ),
+                              child: (step == 2 || step == 6)
+                                  ? SlideTransition(
+                                      position: Tween<Offset>(begin: const Offset(-0.6, 0), end: const Offset(0.6, 0)).animate(
+                                        CurvedAnimation(parent: _swipeController, curve: Curves.easeInOut),
+                                      ),
+                                      child: Icon(Icons.touch_app, size: 60, color: Colors.white.withOpacity(0.8)),
+                                    )
+                                  : ScaleTransition(
+                                      scale: Tween<double>(begin: 1.0, end: 0.8).animate(
+                                        CurvedAnimation(parent: _swipeController, curve: Curves.easeInOut),
+                                      ),
+                                      child: Icon(Icons.touch_app, size: 60, color: Colors.white.withOpacity(0.8)),
+                                    ),
                             ),
                           ),
                       ],
@@ -403,34 +448,32 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      TextButton(
-                        onPressed: _finish,
-                        child: const Text("SKIP TUTORIAL", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                      TextButton.icon(
+                        onPressed: step > 1 ? _onBackPressed : null,
+                        icon: const Icon(Icons.arrow_back, size: 20),
+                        label: const Text("BACK", style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: TextButton.styleFrom(
+                          foregroundColor: step > 1 ? Colors.white70 : Colors.transparent,
+                        ),
                       ),
-                      if (_showNextButton && step == 6)
-                        ElevatedButton.icon(
-                          onPressed: _finish,
-                          icon: const Icon(Icons.rocket_launch),
-                          label: const Text("PLAY GAME", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: green,
-                            foregroundColor: bg,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                        )
-                      else if (_showNextButton)
-                        ElevatedButton.icon(
-                          onPressed: _onNextPressed,
-                          icon: const Icon(Icons.arrow_forward),
-                          label: const Text("NEXT", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: green,
-                            foregroundColor: bg,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                        )
-                      else
-                        const SizedBox(),
+                      ElevatedButton(
+                        onPressed: _showNextButton ? _onNextPressed : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _showNextButton ? green : Colors.white.withOpacity(0.1),
+                          foregroundColor: _showNextButton ? bg : Colors.white54,
+                          disabledBackgroundColor: Colors.white.withOpacity(0.1),
+                          disabledForegroundColor: Colors.white54,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(step == 6 ? "PLAY GAME" : "NEXT", style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                            const SizedBox(width: 8),
+                            Icon(step == 6 ? Icons.rocket_launch : Icons.arrow_forward, size: 20),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
