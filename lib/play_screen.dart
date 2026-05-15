@@ -55,6 +55,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
   final GlobalKey _refreshBtnKey = GlobalKey();
   final GlobalKey _statusAreaKey = GlobalKey();
   int _tutorialStep = -1;
+  Timer? _badgeTimer;
 
   late AnimationController _pulseController;
 
@@ -78,7 +79,20 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
   void dispose() {
     _pulseController.dispose();
     timer?.cancel();
+    _badgeTimer?.cancel();
     super.dispose();
+  }
+
+  void _advanceToStep3() {
+    _tutorialStep = 3;
+    _badgeTimer?.cancel();
+    _badgeTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted && _tutorialStep == 3) {
+        setState(() {
+          _tutorialStep = 4;
+        });
+      }
+    });
   }
 
   Future<void> _checkPlayTutorial() async {
@@ -157,6 +171,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     // Speed is 2x if either toggled on or currently held down
     bool isFast = _isSpeedToggled || _isSpeedHeld;
     int speed = isFast ? 200 : 500;
+
     timer = Timer.periodic(
       Duration(milliseconds: speed),
       (_) => _doTick(),
@@ -200,7 +215,10 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
           gameEndTitle = "Your pattern failed";
           gameEndMessage = "Started with $_initialCellsCount cells, but all died after $generation generations.";
           isWin = false;
-          if (_tutorialStep == 3) _tutorialStep = 4;
+          if (_tutorialStep == 3) {
+            _tutorialStep = 4;
+            _badgeTimer?.cancel();
+          }
         });
         _triggerOverlay();
       }
@@ -219,7 +237,10 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
           gameEndTitle = "Your pattern survived with $aliveCount live cells";
           gameEndMessage = "Started with $_initialCellsCount cells. Stabilized after $generation generations.";
           isWin = true;
-          if (_tutorialStep == 3) _tutorialStep = 4;
+          if (_tutorialStep == 3) {
+            _tutorialStep = 4;
+            _badgeTimer?.cancel();
+          }
         });
         _triggerOverlay();
       }
@@ -239,7 +260,10 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
             gameEndTitle = "Your pattern is looping with $aliveCount live cells";
             gameEndMessage = "Started with $_initialCellsCount cells. Entered a loop after $generation generations.";
             isWin = true;
-            if (_tutorialStep == 3) _tutorialStep = 4;
+            if (_tutorialStep == 3) {
+              _tutorialStep = 4;
+              _badgeTimer?.cancel();
+            }
           });
           _triggerOverlay();
         }
@@ -371,13 +395,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
 
   void clear({bool andResetHighScore = false}) {
     timer?.cancel();
+    _badgeTimer?.cancel();
 
     if (andResetHighScore) {
       _resetHighScore();
     }
 
     setState(() {
-      if (_tutorialStep == 4 && !andResetHighScore) {
+      if ((_tutorialStep == 3 || _tutorialStep == 4) && !andResetHighScore) {
         _tutorialStep = 5;
       }
       generation = 0;
@@ -463,7 +488,13 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
 
   void _checkTutorialStep0() {
     if (_tutorialStep == 0) {
-      bool targetsHit = grid[2][3] == 1 && grid[3][4] == 1 && grid[4][2] == 1 && grid[4][3] == 1 && grid[4][4] == 1;
+      final targets = [
+        [8, 9], [8, 10], [9, 8], [9, 9], [10, 9]
+      ];
+      bool targetsHit = true;
+      for (var t in targets) {
+        if (grid[t[0]][t[1]] != 1) targetsHit = false;
+      }
       int aliveCount = 0;
       for (int x = 0; x < size; x++) {
         for (int y = 0; y < size; y++) {
@@ -677,9 +708,11 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                       int col = index % size;
                                       bool alive = grid[row][col] == 1;
                                       bool isTutorialTarget = _tutorialStep == 0 && !alive && (
-                                        (row == 2 && col == 3) ||
-                                        (row == 3 && col == 4) ||
-                                        (row == 4 && col >= 2 && col <= 4)
+                                        (row == 8 && col == 9) ||
+                                        (row == 8 && col == 10) ||
+                                        (row == 9 && col == 8) ||
+                                        (row == 9 && col == 9) ||
+                                        (row == 10 && col == 9)
                                       );
 
                                       return GestureDetector(
@@ -901,14 +934,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                         onTap: () {
                           setState(() {
                             _isSpeedToggled = !_isSpeedToggled;
-                            if (_tutorialStep == 2) _tutorialStep = 3;
+                            if (_tutorialStep == 2) _advanceToStep3();
                           });
                           _updateSpeed();
                         },
                         onLongPressStart: (_) {
                           setState(() {
                             _isSpeedHeld = true;
-                            if (_tutorialStep == 2) _tutorialStep = 3;
+                            if (_tutorialStep == 2) _advanceToStep3();
                           });
                           _updateSpeed();
                         },
@@ -924,7 +957,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                           // Button is active if toggled on OR held down
                           decoration: BoxDecoration(
                             color: (_isSpeedToggled || _isSpeedHeld) ? green : card,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: (_isSpeedToggled || _isSpeedHeld) ? green : Colors.white.withOpacity(0.1)),
                             boxShadow: _tutorialStep == 2 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
                           ),
@@ -944,7 +977,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                         height: 52,
                         width: 52,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(12),
                           boxShadow: _tutorialStep == 4 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
                         ),
                         child: ElevatedButton(
@@ -954,7 +987,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                             backgroundColor: card,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(12),
                               side: BorderSide(color: Colors.white.withOpacity(0.1)),
                             ),
                           ),
@@ -971,14 +1004,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
             ),
           ],
         ),
-                  _buildInlineTutorial(),
+        _buildInlineTutorial(aliveCount),
       ],
     ),
   ),
 );
   }
 
-  Widget _buildInlineTutorial() {
+  Widget _buildInlineTutorial(int aliveCount) {
     if (_tutorialStep < 0) return const SizedBox.shrink();
 
     String title = "";
@@ -988,10 +1021,15 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     switch (_tutorialStep) {
       case 0:
         title = "1. Draw Life";
-        desc = "Tap the 5 blinking cells to draw a 'Glider'. This pattern will fly across the grid!";
-        bool targetsHit = grid[2][3] == 1 && grid[3][4] == 1 && grid[4][2] == 1 && grid[4][3] == 1 && grid[4][4] == 1;
-        int alive = grid.expand((e) => e).where((c) => c == 1).length;
-        if (!targetsHit && alive > 0) {
+        desc = "Tap the 5 blinking cells to draw an 'R-pentomino'. It starts small but grows massively!";
+        final targets = [
+          [8, 9], [8, 10], [9, 8], [9, 9], [10, 9]
+        ];
+        bool targetsHit = true;
+        for (var t in targets) {
+          if (grid[t[0]][t[1]] != 1) targetsHit = false;
+        }
+        if (!targetsHit && aliveCount > 0) {
           desc = "Tap ONLY the 5 blinking cells. Use the refresh button below to clear if you made a mistake!";
         }
         isTop = false; // Moved to the bottom to not block cells
@@ -1008,7 +1046,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
         break;
       case 3:
         title = "4. Earn Your Badge!";
-        desc = "Watch the Growth stat above! 🚀 Hit 2.0x for the EXCELLENT badge! 🔥";
+        desc = "Watch the Growth stat above! 🚀\n\n🔴 SURVIVING (<1.0x): You lived, but shrunk.\n🟢 GREAT (1.0x-1.9x): Steady growth.\n🟠 EXCELLENT (2.0x+): Massive explosion! 🔥";
         isTop = false; // Status area is at top, put dialog at bottom
         break;
       case 4:
@@ -1059,7 +1097,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
       key: key,
       height: 52,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: isTutorialGlow ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
       ),
       child: ElevatedButton.icon(
@@ -1085,7 +1123,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
           elevation: isPrimary && onTap != null ? 8 : 0,
           shadowColor: green.withOpacity(0.5),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             side: isPrimary
                 ? BorderSide.none
                 : BorderSide(color: Colors.white.withOpacity(0.1)),
