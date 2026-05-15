@@ -52,12 +52,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
   int _highScore = 0;
 
   final GlobalKey _speedBtnKey = GlobalKey();
-  final GlobalKey _refreshBtnKey = GlobalKey();
   final GlobalKey _statusAreaKey = GlobalKey();
   int _tutorialStep = -1;
   Timer? _badgeTimer;
 
   late AnimationController _pulseController;
+
+  int _genTapCount = 0;
+  Timer? _genTapTimer;
 
   @override
   void initState() {
@@ -80,6 +82,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     _pulseController.dispose();
     timer?.cancel();
     _badgeTimer?.cancel();
+    _genTapTimer?.cancel();
     super.dispose();
   }
 
@@ -145,11 +148,6 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
       }
     }
     if (aliveInit == 0) {
-      setState(() {
-        gameEndTitle = "EMPTY GRID";
-        gameEndMessage = "Draw some Live cells before starting!";
-        isWin = false;
-      });
       return;
     }
     _initialCellsCount = aliveInit;
@@ -283,7 +281,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
     const width = 800.0;
-    const height = 900.0;
+    const height = 850.0;
     
     // Background
     final bgPaint = Paint()..color = bg;
@@ -307,7 +305,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
       style: TextStyle(color: green, fontSize: 50, fontWeight: FontWeight.bold, letterSpacing: 4),
     );
     final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr)..layout();
-    titlePainter.paint(canvas, Offset((width - titlePainter.width) / 2, 80));
+    titlePainter.paint(canvas, Offset((width - titlePainter.width) / 2, 60));
 
     // Result Title
     final resultSpan = TextSpan(
@@ -315,7 +313,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
       style: TextStyle(color: isWin ? green : Colors.redAccent, fontSize: 32, fontWeight: FontWeight.w200, letterSpacing: 8),
     );
     final resultPainter = TextPainter(text: resultSpan, textDirection: TextDirection.ltr)..layout();
-    resultPainter.paint(canvas, Offset((width - resultPainter.width) / 2, 140));
+    resultPainter.paint(canvas, Offset((width - resultPainter.width) / 2, 115));
 
     // Draw Grids Function
     void drawGrid(Canvas c, Offset offset, double gridSize, List<List<int>> gridData, String label) {
@@ -351,26 +349,36 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     }
 
     // Grids side by side
-    const gridRenderSize = 260.0;
-    drawGrid(canvas, const Offset(80, 240), gridRenderSize, _initialGridSnapshot, "INITIAL");
-    drawGrid(canvas, const Offset(width - 80 - gridRenderSize, 240), gridRenderSize, grid, "FINAL");
+    const gridRenderSize = 310.0;
+    drawGrid(canvas, const Offset(70, 180), gridRenderSize, _initialGridSnapshot, "INITIAL");
+    drawGrid(canvas, const Offset(width - 70 - gridRenderSize, 180), gridRenderSize, grid, "FINAL");
 
-    // Stats Box
-    String badge = growthMultiplier >= 2.0 ? "Excellent" : (growthMultiplier >= 1.0 ? "Great" : "Survived");
-    if (!isWin) badge = "Extinct";
+    // Stats Box Details
+    Color growthColor = growthMultiplier >= 2.0 ? Colors.amber : (growthMultiplier >= 1.0 ? green : Colors.redAccent);
+    String badge = growthMultiplier >= 2.0 ? "EXCELLENT" : (growthMultiplier >= 1.0 ? "GREAT" : "SURVIVING");
+    if (!isWin) badge = "DIED";
+    Color finalBadgeColor = isWin ? growthColor : Colors.redAccent;
 
-    final statsText = "Start Cells: $_initialCellsCount\n"
-                      "Final Cells: $aliveCount\n"
-                      "Generations: $generation\n"
-                      "Growth: ${growthMultiplier.toStringAsFixed(1)}x\n"
-                      "Badge: $badge";
-    
-    final statsSpan = TextSpan(
-      text: statsText,
-      style: const TextStyle(color: Colors.white, fontSize: 28, height: 1.6, fontWeight: FontWeight.w500),
-    );
-    final statsPainter = TextPainter(text: statsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout();
-    statsPainter.paint(canvas, Offset((width - statsPainter.width) / 2, 560));
+    void drawStat(Canvas c, Offset center, double w, String label, String val, Color valColor, String emoji) {
+      final rect = RRect.fromRectAndRadius(Rect.fromCenter(center: center, width: w, height: 100), const Radius.circular(20));
+      c.drawRRect(rect, Paint()..color = Colors.white.withOpacity(0.05));
+      
+      final labelSpan = TextSpan(text: "$emoji  $label", style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5));
+      final labelP = TextPainter(text: labelSpan, textDirection: TextDirection.ltr)..layout();
+      labelP.paint(c, Offset(center.dx - labelP.width / 2, center.dy - 28));
+
+      final valSpan = TextSpan(text: val, style: TextStyle(color: valColor, fontSize: 32, fontWeight: FontWeight.bold));
+      final valP = TextPainter(text: valSpan, textDirection: TextDirection.ltr)..layout();
+      valP.paint(c, Offset(center.dx - valP.width / 2, center.dy + 2));
+    }
+
+    // Draw row 1
+    drawStat(canvas, const Offset(width / 2 - 240, 560), 220, "START", "$_initialCellsCount", Colors.white, "🥚");
+    drawStat(canvas, const Offset(width / 2, 560), 220, "GENS", "$generation", Colors.white, "⏳");
+    drawStat(canvas, const Offset(width / 2 + 240, 560), 220, "FINAL", "$aliveCount", Colors.white, "🧬");
+    // Draw row 2
+    drawStat(canvas, const Offset(width / 2 - 180, 680), 340, "GROWTH", "${growthMultiplier.toStringAsFixed(1)}x", growthColor, "📈");
+    drawStat(canvas, const Offset(width / 2 + 180, 680), 340, "BADGE", badge, finalBadgeColor, "🏅");
 
     // Footer
     const footerSpan = TextSpan(
@@ -378,7 +386,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
       style: TextStyle(color: Colors.grey, fontSize: 18, letterSpacing: 1.2),
     );
     final footerPainter = TextPainter(text: footerSpan, textDirection: TextDirection.ltr)..layout();
-    footerPainter.paint(canvas, Offset((width - footerPainter.width) / 2, height - 100));
+    footerPainter.paint(canvas, Offset((width - footerPainter.width) / 2, height - 80));
 
     final picture = recorder.endRecording();
     final img = await picture.toImage(width.toInt(), height.toInt());
@@ -412,6 +420,9 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
       _showOverlay = false;
       history.clear();
       _initialCellsCount = 0;
+      
+      _isSpeedToggled = false;
+      _isSpeedHeld = false;
 
       grid = List.generate(
         size,
@@ -517,10 +528,17 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     }
     String status = aliveCount == 0 ? "All cells empty" : "Active";
 
+    bool isRunning = timer != null && timer!.isActive;
     double growthMultiplier = _initialCellsCount > 0 ? (aliveCount / _initialCellsCount) : 0.0;
     Color growthColor = growthMultiplier >= 2.0 ? Colors.amber : (growthMultiplier >= 1.0 ? green : Colors.redAccent);
     IconData growthIcon = growthMultiplier >= 2.0 ? Icons.local_fire_department : (growthMultiplier >= 1.0 ? Icons.trending_up : Icons.trending_down);
     String liveBadgeText = growthMultiplier >= 2.0 ? "EXCELLENT" : (growthMultiplier >= 1.0 ? "GREAT" : "SURVIVING");
+    if (gameEndTitle != null && !isWin) liveBadgeText = "DIED";
+    Color finalBadgeColor = (gameEndTitle != null && !isWin) ? Colors.redAccent : growthColor;
+    
+    String badgePrefix = " You did ";
+    if (liveBadgeText == "SURVIVING") badgePrefix = " You are ";
+    if (liveBadgeText == "DIED") badgePrefix = " You ";
 
     return SafeArea(
       child: Padding(
@@ -540,7 +558,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: _tutorialStep == 3 ? green : Colors.transparent, width: 2),
-                          boxShadow: _tutorialStep == 3 ? [BoxShadow(color: green.withOpacity(0.2), blurRadius: 15, spreadRadius: 5)] : [],
+                          boxShadow: _tutorialStep == 3 ? [BoxShadow(color: green.withOpacity(0.4), blurRadius: 25, spreadRadius: 6)] : [],
                         ),
                         child: Column(
                           children: [
@@ -557,25 +575,31 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                 ),
                                 Row(
                                   children: [
-                                    const Icon(Icons.military_tech, color: Colors.amber, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      "$_highScore",
-                                      style: const TextStyle(
-                                        color: Colors.amber,
-                                        fontWeight: FontWeight.bold,
+                                    Tooltip(
+                                      message: "Your highscore is: $_highScore",
+                                      triggerMode: TooltipTriggerMode.tap,
+                                      preferBelow: true,
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.military_tech, color: Colors.amber, size: 16),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            "$_highScore",
+                                            style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Container(
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        boxShadow: _tutorialStep == 5 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15)] : [],
+                                        boxShadow: _tutorialStep == 5 ? [BoxShadow(color: green.withOpacity(0.8), blurRadius: 25, spreadRadius: 6)] : [],
                                       ),
                                       child: IconButton(
                                         key: widget.ruleLabBtnKey,
-                                        icon: const Icon(Icons.tune, color: green),
-                                        onPressed: () {
+                                        icon: Icon(Icons.tune, color: isRunning ? Colors.grey : green),
+                                        onPressed: isRunning ? null : () {
                                           if (_tutorialStep == 5) {
                                             setState(() => _tutorialStep = -1);
                                             SharedPreferences.getInstance().then((p) => p.setBool('playScreenTutorialShown', true));
@@ -586,14 +610,26 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.help_outline, color: green),
-                                      onPressed: widget.onHelpTap,
+                                      icon: Icon(Icons.help_outline, color: isRunning ? Colors.grey : green),
+                                      onPressed: isRunning ? null : widget.onHelpTap,
                                       tooltip: "Tutorial",
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      "GEN $generation",
-                                      style: const TextStyle(color: Colors.grey),
+                                    GestureDetector(
+                                      onTap: () {
+                                        _genTapCount++;
+                                        _genTapTimer?.cancel();
+                                        if (_genTapCount >= 5) {
+                                          _genTapCount = 0;
+                                          clear(andResetHighScore: true);
+                                        } else {
+                                          _genTapTimer = Timer(const Duration(milliseconds: 500), () => _genTapCount = 0);
+                                        }
+                                      },
+                                      child: Text(
+                                        "GEN $generation",
+                                        style: const TextStyle(color: Colors.grey),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -632,7 +668,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                               Icon(growthIcon, color: growthColor, size: 14),
                                               const SizedBox(width: 4),
                                               Text(
-                                                "${growthMultiplier.toStringAsFixed(1)}x $liveBadgeText",
+                                                "${growthMultiplier.toStringAsFixed(1)}x",
                                                 style: TextStyle(color: growthColor, fontWeight: FontWeight.bold, fontSize: 12),
                                               ),
                                             ],
@@ -643,11 +679,20 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                   ),
                                   if (gameEndMessage != null) ...[
                                     const SizedBox(height: 4),
-                                    Text(
-                                      gameEndMessage!,
+                                    Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          TextSpan(text: gameEndMessage!),
+                                          TextSpan(text: badgePrefix),
+                                          TextSpan(
+                                            text: liveBadgeText,
+                                            style: TextStyle(color: finalBadgeColor, fontWeight: FontWeight.bold),
+                                          ),
+                                          const TextSpan(text: "!"),
+                                        ],
+                                      ),
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: Colors.white70, fontSize: 13),
+                                      style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.3),
                                     ),
                                   ],
                                 ],
@@ -672,7 +717,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: _tutorialStep == 0 ? green : Colors.transparent, width: 2),
-                              boxShadow: _tutorialStep == 0 ? [BoxShadow(color: green.withOpacity(0.2), blurRadius: 20, spreadRadius: 5)] : [],
+                              boxShadow: _tutorialStep == 0 ? [BoxShadow(color: green.withOpacity(0.4), blurRadius: 30, spreadRadius: 8)] : [],
                             ),
                             child: Stack(
                               alignment: Alignment.center,
@@ -680,6 +725,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                 GestureDetector(
                                   onPanUpdate: (details) {
                                     if (timer != null && timer!.isActive) return;
+                                    if (gameEndTitle != null) return;
                                     int col = (details.localPosition.dx / cellWidth).floor();
                                     int row = (details.localPosition.dy / cellWidth).floor();
                                     if (row >= 0 && row < size && col >= 0 && col < size) {
@@ -719,6 +765,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                         behavior: HitTestBehavior.opaque,
                                         onTap: () {
                                           if (timer != null && timer!.isActive) return;
+                                          if (gameEndTitle != null) return;
                                           setState(() {
                                             grid[row][col] = 1 - grid[row][col];
                                             gameEndTitle = null;
@@ -925,13 +972,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                           gameEndTitle != null ? Icons.replay : Icons.play_arrow,
                           gameEndTitle != null ? tryAgain : ((timer != null && timer!.isActive) ? null : start),
                           isPrimary: true,
-                          isTutorialGlow: _tutorialStep == 1,
+                          isTutorialGlow: _tutorialStep == 1 || _tutorialStep == 4,
                           key: widget.playBtnKey,
                         ),
                       ),
                       const SizedBox(width: 12),
                       GestureDetector(
                         onTap: () {
+                          if (!isRunning) return;
                           setState(() {
                             _isSpeedToggled = !_isSpeedToggled;
                             if (_tutorialStep == 2) _advanceToStep3();
@@ -939,6 +987,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                           _updateSpeed();
                         },
                         onLongPressStart: (_) {
+                          if (!isRunning) return;
                           setState(() {
                             _isSpeedHeld = true;
                             if (_tutorialStep == 2) _advanceToStep3();
@@ -946,6 +995,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                           _updateSpeed();
                         },
                         onLongPressEnd: (_) {
+                          if (!isRunning) return;
                           setState(() => _isSpeedHeld = false);
                           _updateSpeed();
                         },
@@ -954,47 +1004,19 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                           duration: const Duration(milliseconds: 150),
                           height: 52,
                           width: 52,
-                          // Button is active if toggled on OR held down
                           decoration: BoxDecoration(
-                            color: (_isSpeedToggled || _isSpeedHeld) ? green : card,
+                            color: !isRunning ? card.withOpacity(0.5) : ((_isSpeedToggled || _isSpeedHeld) ? green : card),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: (_isSpeedToggled || _isSpeedHeld) ? green : Colors.white.withOpacity(0.1)),
-                            boxShadow: _tutorialStep == 2 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
+                            border: Border.all(color: isRunning && (_isSpeedToggled || _isSpeedHeld) ? green : Colors.white.withOpacity(0.1)),
+                          boxShadow: _tutorialStep == 2 ? [BoxShadow(color: green.withOpacity(0.8), blurRadius: 25, spreadRadius: 6)] : [],
                           ),
                           child: Center(
                             child: Icon(
                               Icons.bolt,
-                              color: (_isSpeedToggled || _isSpeedHeld) ? bg : Colors.white,
+                              color: !isRunning ? Colors.white54 : ((_isSpeedToggled || _isSpeedHeld) ? bg : Colors.white),
                               size: 28,
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        key: _refreshBtnKey,
-                        height: 52,
-                        width: 52,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: _tutorialStep == 4 ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: () => clear(),
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            backgroundColor: card,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                            ),
-                          ),
-                          child: const Icon(Icons.refresh, size: 24),
-                          onLongPress: () {
-                            clear(andResetHighScore: true);
-                          },
                         ),
                       ),
                     ],
@@ -1030,7 +1052,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
           if (grid[t[0]][t[1]] != 1) targetsHit = false;
         }
         if (!targetsHit && aliveCount > 0) {
-          desc = "Tap ONLY the 5 blinking cells. Use the refresh button below to clear if you made a mistake!";
+          desc = "Tap ONLY the 5 blinking cells. Tap a cell again to remove it if you made a mistake!";
         }
         isTop = false; // Moved to the bottom to not block cells
         break;
@@ -1051,7 +1073,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
         break;
       case 4:
         title = "5. Clear & Reset";
-        desc = "Awesome run! Tap the glowing refresh button below to clear the grid for your next masterpiece.\n\n(Tip: Long-press it anytime to reset your High Score and Tutorials!)";
+        desc = "Awesome run! Tap 'Play Again' below to clear the grid for your next masterpiece.";
         isTop = true;
         break;
       case 5:
@@ -1098,7 +1120,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
       height: 52,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        boxShadow: isTutorialGlow ? [BoxShadow(color: green.withOpacity(0.6), blurRadius: 15, spreadRadius: 2)] : [],
+        boxShadow: isTutorialGlow ? [BoxShadow(color: green.withOpacity(0.8), blurRadius: 25, spreadRadius: 6)] : [],
       ),
       child: ElevatedButton.icon(
         onPressed: onTap,

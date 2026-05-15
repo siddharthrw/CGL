@@ -448,12 +448,23 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      TextButton.icon(
+                      ElevatedButton(
                         onPressed: step > 1 ? _onBackPressed : null,
-                        icon: const Icon(Icons.arrow_back, size: 20),
-                        label: const Text("BACK", style: TextStyle(fontWeight: FontWeight.bold)),
-                        style: TextButton.styleFrom(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: step > 1 ? Colors.white.withOpacity(0.1) : Colors.transparent,
                           foregroundColor: step > 1 ? Colors.white70 : Colors.transparent,
+                          disabledBackgroundColor: Colors.transparent,
+                          disabledForegroundColor: Colors.transparent,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.arrow_back, size: 20, color: step > 1 ? Colors.white70 : Colors.transparent),
+                            const SizedBox(width: 8),
+                            Text("BACK", style: TextStyle(fontWeight: FontWeight.bold, color: step > 1 ? Colors.white70 : Colors.transparent)),
+                          ],
                         ),
                       ),
                       ElevatedButton(

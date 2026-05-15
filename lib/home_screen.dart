@@ -264,10 +264,8 @@ class _RuleLabSheetState extends State<_RuleLabSheet> {
             const Text("RULE LAB", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
             _buildModeCard(RuleMode.standard, "Standard", "Birth: 3 cells | Survive: 2-3 cells\nPerfect balance. You can easily reach a stable state."),
-            _buildModeCard(RuleMode.custom, "Custom", "Set your own laws of physics."),
             
             if (_mode == RuleMode.custom) ...[
-              const SizedBox(height: 16),
               const Text("Neighbors required for BIRTH", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               const Text("These many live neighbor cells are required for an Empty cell to become a Live cell.", style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.3)),
@@ -290,7 +288,10 @@ class _RuleLabSheetState extends State<_RuleLabSheet> {
                   _sMax = v.end.toInt();
                 }),
               ),
+              const SizedBox(height: 16),
             ],
+            
+            _buildModeCard(RuleMode.custom, "Custom", "Set your own laws of physics."),
             
             const SizedBox(height: 24),
             SizedBox(

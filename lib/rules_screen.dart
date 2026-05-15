@@ -32,29 +32,41 @@ class RulesScreen extends StatelessWidget {
         const EdgeInsets.all(20),
 
         children: [
-
-          const Text(
-            "RULES LAB",
-            style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "RULES LAB",
+                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 2),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    "Experiment with life.",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  onBirthChanged(3);
+                  onSurviveMinChanged(2);
+                  onSurviveMaxChanged(3);
+                },
+                icon: const Icon(Icons.restore, size: 16),
+                label: const Text("Reset", style: TextStyle(fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: green,
+                  side: const BorderSide(color: green, width: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
           ),
 
-          const SizedBox(
-              height: 8),
-
-          const Text(
-            "Experiment with life.",
-            style: TextStyle(
-              color: Colors.grey,
-            ),
-          ),
-
-          const SizedBox(
-              height: 30),
+          const SizedBox(height: 24),
 
           sliderCard(
             "👶 Birth Rule",
@@ -80,26 +92,6 @@ class RulesScreen extends StatelessWidget {
           infoCard(
             "🧪 TRY THIS",
             "Change the rules and watch life evolve differently.",
-          ),
-
-          const SizedBox(height: 24),
-
-          OutlinedButton.icon(
-            onPressed: () {
-              onBirthChanged(3);
-              onSurviveMinChanged(2);
-              onSurviveMaxChanged(3);
-            },
-            icon: const Icon(Icons.restore),
-            label: const Text("Reset to Standard Rules", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: green,
-              side: const BorderSide(color: green, width: 2),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
           ),
         ],
       ),
@@ -200,6 +192,7 @@ class RulesScreen extends StatelessWidget {
                     message: tooltipText,
                     triggerMode: TooltipTriggerMode.tap,
                     showDuration: const Duration(seconds: 4),
+                    preferBelow: false,
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
