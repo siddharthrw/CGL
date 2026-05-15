@@ -84,9 +84,6 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
   Future<void> _checkPlayTutorial() async {
     final prefs = await SharedPreferences.getInstance();
     
-    // Force the tutorial to reset and show again so you can see the full walkthrough!
-    await prefs.setBool('playScreenTutorialShown', false);
-
     bool shown = prefs.getBool('playScreenTutorialShown') ?? false;
     if (!shown) {
       setState(() {
@@ -97,9 +94,8 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
 
   Future<void> _loadHighScore() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('highScore', 0); // Force reset to 0 for testing
     setState(() {
-      _highScore = 0;
+      _highScore = prefs.getInt('highScore') ?? 0;
     });
   }
 
@@ -204,6 +200,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
           gameEndTitle = "Your pattern failed";
           gameEndMessage = "Started with $_initialCellsCount cells, but all died after $generation generations.";
           isWin = false;
+          if (_tutorialStep == 3) _tutorialStep = 4;
         });
         _triggerOverlay();
       }
@@ -222,6 +219,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
           gameEndTitle = "Your pattern survived with $aliveCount live cells";
           gameEndMessage = "Started with $_initialCellsCount cells. Stabilized after $generation generations.";
           isWin = true;
+          if (_tutorialStep == 3) _tutorialStep = 4;
         });
         _triggerOverlay();
       }
@@ -241,6 +239,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
             gameEndTitle = "Your pattern is looping with $aliveCount live cells";
             gameEndMessage = "Started with $_initialCellsCount cells. Entered a loop after $generation generations.";
             isWin = true;
+            if (_tutorialStep == 3) _tutorialStep = 4;
           });
           _triggerOverlay();
         }
@@ -378,6 +377,9 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     }
 
     setState(() {
+      if (_tutorialStep == 4 && !andResetHighScore) {
+        _tutorialStep = 5;
+      }
       generation = 0;
       gameEndTitle = null;
       gameEndMessage = null;
@@ -398,11 +400,18 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('highScore', 0);
     await prefs.setBool('playScreenTutorialShown', false);
+    // Let's proactively clear common keys for your Welcome/Learn Screen
+    await prefs.setBool('learnScreenTutorialShown', false);
+    await prefs.setBool('welcomeTutorialShown', false);
+    await prefs.setBool('isFirstTime', true);
     if (mounted) {
-      setState(() => _highScore = 0);
+      setState(() {
+        _highScore = 0;
+        _tutorialStep = 0; // Instantly restart tutorial on this screen
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("High Score & Tutorial Reset!"),
+          content: Text("High Score & Tutorials Reset!"),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -452,6 +461,21 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     return count;
   }
 
+  void _checkTutorialStep0() {
+    if (_tutorialStep == 0) {
+      bool targetsHit = grid[2][3] == 1 && grid[3][4] == 1 && grid[4][2] == 1 && grid[4][3] == 1 && grid[4][4] == 1;
+      int aliveCount = 0;
+      for (int x = 0; x < size; x++) {
+        for (int y = 0; y < size; y++) {
+          if (grid[x][y] == 1) aliveCount++;
+        }
+      }
+      if (targetsHit && aliveCount == 5) {
+        _tutorialStep = 1;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     int aliveCount = 0;
@@ -465,6 +489,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     double growthMultiplier = _initialCellsCount > 0 ? (aliveCount / _initialCellsCount) : 0.0;
     Color growthColor = growthMultiplier >= 2.0 ? Colors.amber : (growthMultiplier >= 1.0 ? green : Colors.redAccent);
     IconData growthIcon = growthMultiplier >= 2.0 ? Icons.local_fire_department : (growthMultiplier >= 1.0 ? Icons.trending_up : Icons.trending_down);
+    String liveBadgeText = growthMultiplier >= 2.0 ? "EXCELLENT" : (growthMultiplier >= 1.0 ? "GREAT" : "SURVIVING");
 
     return SafeArea(
       child: Padding(
@@ -519,7 +544,13 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                       child: IconButton(
                                         key: widget.ruleLabBtnKey,
                                         icon: const Icon(Icons.tune, color: green),
-                                        onPressed: widget.onRuleLabTap,
+                                        onPressed: () {
+                                          if (_tutorialStep == 5) {
+                                            setState(() => _tutorialStep = -1);
+                                            SharedPreferences.getInstance().then((p) => p.setBool('playScreenTutorialShown', true));
+                                          }
+                                          widget.onRuleLabTap();
+                                        },
                                         tooltip: "Experiment with Rules",
                                       ),
                                     ),
@@ -570,7 +601,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                               Icon(growthIcon, color: growthColor, size: 14),
                                               const SizedBox(width: 4),
                                               Text(
-                                                "${growthMultiplier.toStringAsFixed(1)}x",
+                                                "${growthMultiplier.toStringAsFixed(1)}x $liveBadgeText",
                                                 style: TextStyle(color: growthColor, fontWeight: FontWeight.bold, fontSize: 12),
                                               ),
                                             ],
@@ -629,6 +660,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                           isWin = false;
                                           _showOverlay = false;
                                           history.clear();
+                                          _checkTutorialStep0();
                                         });
                                       }
                                     }
@@ -661,6 +693,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                             isWin = false;
                                             _showOverlay = false;
                                             history.clear();
+                                            _checkTutorialStep0();
                                           });
                                         },
                                         child: isTutorialTarget
@@ -950,65 +983,49 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
 
     String title = "";
     String desc = "";
-    bool showNext = false;
-    bool nextEnabled = true;
-    String nextText = "NEXT";
-    VoidCallback? onNext = () => setState(() => _tutorialStep++);
     bool isTop = true;
 
     switch (_tutorialStep) {
       case 0:
         title = "1. Draw Life";
         desc = "Tap the 5 blinking cells to draw a 'Glider'. This pattern will fly across the grid!";
-        showNext = true;
         bool targetsHit = grid[2][3] == 1 && grid[3][4] == 1 && grid[4][2] == 1 && grid[4][3] == 1 && grid[4][4] == 1;
         int alive = grid.expand((e) => e).where((c) => c == 1).length;
-        nextEnabled = targetsHit && alive == 5;
-        if (!nextEnabled && alive > 0) {
+        if (!targetsHit && alive > 0) {
           desc = "Tap ONLY the 5 blinking cells. Use the refresh button below to clear if you made a mistake!";
         }
-        isTop = true;
+        isTop = false; // Moved to the bottom to not block cells
         break;
       case 1:
         title = "2. Evolve";
         desc = "Great! Now press the glowing 'Play' button below to watch your cells evolve.";
-        showNext = false; // Auto advances on play
         isTop = true;
         break;
       case 2:
         title = "3. Speed Control";
         desc = "Simulation running too slow? Tap the glowing lightning button to toggle 2x speed, or hold it down for a boost!";
-        showNext = true; // They can tap next if they don't want to change speed
         isTop = true;
         break;
       case 3:
-        title = "4. How to Win";
-        desc = "To win, your pattern must stabilize into a loop or stop changing. If all cells die, you lose! The more your cells multiply, the better your Badge:\n\n• Survived (Red): < 1.0x growth\n• Great (Green): 1.0x - 1.9x growth\n• Excellent (Amber): 2.0x+ growth";
-        showNext = true;
+        title = "4. Earn Your Badge!";
+        desc = "Watch the Growth stat above! 🚀 Hit 2.0x for the EXCELLENT badge! 🔥";
         isTop = false; // Status area is at top, put dialog at bottom
         break;
       case 4:
         title = "5. Clear & Reset";
-        desc = "Want a clean slate? Tap the glowing refresh button to wipe the grid. Long-press it to reset your High Score!";
-        showNext = true;
+        desc = "Awesome run! Tap the glowing refresh button below to clear the grid for your next masterpiece.\n\n(Tip: Long-press it anytime to reset your High Score and Tutorials!)";
         isTop = true;
         break;
       case 5:
-        title = "6. Rule Lab";
-        desc = "Play God! Tap the tune icon at the top right to change the rules of physics.";
-        showNext = true;
-        nextText = "LET'S PLAY!";
-        onNext = () {
-          setState(() => _tutorialStep = -1);
-          SharedPreferences.getInstance().then((p) => p.setBool('playScreenTutorialShown', true));
-        };
+        title = "6. Play God";
+        desc = "Ready for the real magic? Tap the glowing tune icon at the top right to change the laws of physics and discover entirely new lifeforms! 🧬🔬";
         isTop = false;
         break;
     }
 
     return Positioned(
       top: isTop ? 20 : null,
-      bottom: isTop ? null : 20,
+      bottom: isTop ? null : 90, // Moved up slightly to not cover the Play/Refresh buttons
       left: 10,
       right: 10,
       child: Material(
@@ -1028,22 +1045,6 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
               Text(title, style: const TextStyle(color: green, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Text(desc, style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4)),
-              if (showNext) ...[
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton(
-                    onPressed: nextEnabled ? onNext : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: green,
-                      foregroundColor: bg,
-                      disabledBackgroundColor: Colors.grey.withOpacity(0.3),
-                      disabledForegroundColor: Colors.white54,
-                    ),
-                    child: Text(nextText, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                )
-              ]
             ],
           ),
         ),
