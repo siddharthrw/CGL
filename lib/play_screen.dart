@@ -544,10 +544,10 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
         clear();
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: card.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withOpacity(0.1)),
           boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
         ),
@@ -557,10 +557,10 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.white70, size: 16),
+              Icon(icon, color: Colors.white70, size: 14),
               if (_showResetText) ...[
-                const SizedBox(width: 6),
-                Text(text, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 4),
+                Text(text, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
               ]
             ],
           ),
