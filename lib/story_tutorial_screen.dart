@@ -467,22 +467,27 @@ class _StoryTutorialScreenState extends State<StoryTutorialScreen> with SingleTi
                           ],
                         ),
                       ),
-                      ElevatedButton(
-                        onPressed: _showNextButton ? _onNextPressed : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _showNextButton ? green : Colors.white.withOpacity(0.1),
-                          foregroundColor: _showNextButton ? bg : Colors.white54,
-                          disabledBackgroundColor: Colors.white.withOpacity(0.1),
-                          disabledForegroundColor: Colors.white54,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(step == 6 ? "PLAY GAME" : "NEXT", style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                            const SizedBox(width: 8),
-                            Icon(step == 6 ? Icons.rocket_launch : Icons.arrow_forward, size: 20),
-                          ],
+                      IgnorePointer(
+                        ignoring: !_showNextButton,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 800),
+                          opacity: _showNextButton ? 1.0 : 0.3,
+                          child: ElevatedButton(
+                            onPressed: _onNextPressed,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: green,
+                              foregroundColor: bg,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(step == 6 ? "PLAY GAME" : "NEXT", style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                                const SizedBox(width: 8),
+                                Icon(step == 6 ? Icons.rocket_launch : Icons.arrow_forward, size: 20),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],

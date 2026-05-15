@@ -61,6 +61,13 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
   int _genTapCount = 0;
   Timer? _genTapTimer;
 
+  bool _showResetText = false;
+  bool _hasShownResetText = false;
+  bool _hasShownRestartText = false;
+  Timer? _resetTextTimer;
+
+  final LayerLink _gridLink = LayerLink();
+
   @override
   void initState() {
     super.initState();
@@ -83,19 +90,13 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     timer?.cancel();
     _badgeTimer?.cancel();
     _genTapTimer?.cancel();
+    _resetTextTimer?.cancel();
     super.dispose();
   }
 
   void _advanceToStep3() {
     _tutorialStep = 3;
     _badgeTimer?.cancel();
-    _badgeTimer = Timer(const Duration(seconds: 10), () {
-      if (mounted && _tutorialStep == 3) {
-        setState(() {
-          _tutorialStep = 4;
-        });
-      }
-    });
   }
 
   Future<void> _checkPlayTutorial() async {
@@ -157,6 +158,15 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     history.add(_gridToString(grid));
 
     _setTimer();
+
+    if (!_hasShownRestartText) {
+      _hasShownRestartText = true;
+      setState(() => _showResetText = true);
+      _resetTextTimer?.cancel();
+      _resetTextTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _showResetText = false);
+      });
+    }
   }
 
   void tryAgain() {
@@ -410,6 +420,10 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
     }
 
     setState(() {
+      _showResetText = false;
+      _hasShownResetText = false;
+      _hasShownRestartText = false;
+      _resetTextTimer?.cancel();
       if ((_tutorialStep == 3 || _tutorialStep == 4) && !andResetHighScore) {
         _tutorialStep = 5;
       }
@@ -516,6 +530,43 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
         _tutorialStep = 1;
       }
     }
+  }
+
+  Widget _buildResetButton() {
+    if (_tutorialStep != -1) return const SizedBox.shrink();
+
+    bool isRunning = timer != null && timer!.isActive;
+    String text = isRunning ? "Restart" : "Reset";
+    IconData icon = isRunning ? Icons.restart_alt : Icons.refresh;
+
+    return GestureDetector(
+      onTap: () {
+        clear();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: card.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+        ),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white70, size: 16),
+              if (_showResetText) ...[
+                const SizedBox(width: 6),
+                Text(text, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -701,7 +752,6 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                           ],
                         ),
                       ),
-                  const SizedBox(height: 12),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -709,8 +759,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                             ? constraints.maxWidth
                             : constraints.maxHeight;
                         double cellWidth = gridSize / size;
+
+                        double gridTop = (constraints.maxHeight - gridSize) / 2;
+                        double gridRight = (constraints.maxWidth - gridSize) / 2;
+
                         return Center(
-                          child: AnimatedContainer(
+                          child: CompositedTransformTarget(
+                            link: _gridLink,
+                            child: AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             width: gridSize,
                             height: gridSize,
@@ -729,6 +785,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                     int col = (details.localPosition.dx / cellWidth).floor();
                                     int row = (details.localPosition.dy / cellWidth).floor();
                                     if (row >= 0 && row < size && col >= 0 && col < size) {
+                                      if (_tutorialStep == 0) {
+                                        bool validTarget = (row == 8 && col == 9) ||
+                                          (row == 8 && col == 10) ||
+                                          (row == 9 && col == 8) ||
+                                          (row == 9 && col == 9) ||
+                                          (row == 10 && col == 9);
+                                        if (!validTarget) return;
+                                      }
                                       if (grid[row][col] == 0) {
                                         setState(() {
                                           grid[row][col] = 1;
@@ -738,6 +802,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                           _showOverlay = false;
                                           history.clear();
                                           _checkTutorialStep0();
+                                          if (_tutorialStep == -1 && !_hasShownResetText) {
+                                            _hasShownResetText = true;
+                                            _showResetText = true;
+                                            _resetTextTimer?.cancel();
+                                            _resetTextTimer = Timer(const Duration(seconds: 2), () {
+                                              if (mounted) setState(() => _showResetText = false);
+                                            });
+                                          }
                                         });
                                       }
                                     }
@@ -766,6 +838,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                         onTap: () {
                                           if (timer != null && timer!.isActive) return;
                                           if (gameEndTitle != null) return;
+                                          if (_tutorialStep == 0) {
+                                            bool validTarget = (row == 8 && col == 9) ||
+                                              (row == 8 && col == 10) ||
+                                              (row == 9 && col == 8) ||
+                                              (row == 9 && col == 9) ||
+                                              (row == 10 && col == 9);
+                                            if (!validTarget) return;
+                                          }
                                           setState(() {
                                             grid[row][col] = 1 - grid[row][col];
                                             gameEndTitle = null;
@@ -774,6 +854,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                             _showOverlay = false;
                                             history.clear();
                                             _checkTutorialStep0();
+                                            if (_tutorialStep == -1 && !_hasShownResetText) {
+                                              _hasShownResetText = true;
+                                              _showResetText = true;
+                                              _resetTextTimer?.cancel();
+                                              _resetTextTimer = Timer(const Duration(seconds: 2), () {
+                                                if (mounted) setState(() => _showResetText = false);
+                                              });
+                                            }
                                           });
                                         },
                                         child: isTutorialTarget
@@ -871,6 +959,7 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
                                   ),
                                 ),
                               ],
+                            ),
                             ),
                           ),
                         );
@@ -1027,6 +1116,14 @@ class PlayScreenState extends State<PlayScreen> with SingleTickerProviderStateMi
           ],
         ),
         _buildInlineTutorial(aliveCount),
+        CompositedTransformFollower(
+          link: _gridLink,
+          showWhenUnlinked: false,
+          targetAnchor: Alignment.topRight,
+          followerAnchor: Alignment.bottomRight,
+          offset: const Offset(0, -8),
+          child: _buildResetButton(),
+        ),
       ],
     ),
   ),
